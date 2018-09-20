@@ -8,11 +8,11 @@ describe "Resque::Worker" do
 
     def self.perform
       Resque.redis.reconnect # get its own connection
-      Resque.redis.rpush('sigterm-test:start', Process.pid)
+      Resque.redis.rpush('long-test:start', Process.pid)
       sleep 5
-      Resque.redis.rpush('sigterm-test:result', 'Finished Normally')
+      Resque.redis.rpush('long-test:result', 'Finished Normally')
     ensure
-      Resque.redis.rpush('sigterm-test:ensure_block_executed', 'exiting.')
+      Resque.redis.rpush('long-test:ensure_block_executed', 'exiting.')
     end
   end
 
@@ -33,7 +33,7 @@ describe "Resque::Worker" do
     end
 
     # ensure the worker is started
-    start_status = Resque.redis.blpop('sigterm-test:start', 5)
+    start_status = Resque.redis.blpop('long-test:start', 5)
     refute_nil start_status
     child_pid = start_status[1].to_i
     assert child_pid > 0, "worker child process not created"
@@ -51,7 +51,7 @@ describe "Resque::Worker" do
     Process.kill('TERM', worker_pid)
     Process.waitpid(worker_pid)
 
-    result = Resque.redis.lpop('sigterm-test:result')
+    result = Resque.redis.lpop('long-test:result')
     assert_nil result
     assert_child_not_running child_pid
     assert_equal('Resque::DirtyExit', Resque::Failure.all['exception'])
@@ -64,7 +64,7 @@ describe "Resque::Worker" do
     thread.kill
     sleep 3
 
-    result = Resque.redis.lpop('sigterm-test:result')
+    result = Resque.redis.lpop('long-test:result')
     assert_nil result
     assert_equal('Resque::DirtyExit', Resque::Failure.all['exception'])
     assert_equal('Job was killed', Resque::Failure.all['error'])
@@ -73,7 +73,7 @@ describe "Resque::Worker" do
   it "runs if not killed" do
     worker_pid, _child_pid = start_worker
 
-    result = Resque.redis.blpop('sigterm-test:result')
+    result = Resque.redis.blpop('long-test:result')
     assert 'Finished Normally' == result.last
   end
 end

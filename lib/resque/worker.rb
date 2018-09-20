@@ -125,7 +125,7 @@ module Resque
         (1..worker_count).map { fork_worker_process(interval, &block) }
 
         loop do
-          will_shutdown = interval.zero? or shutdown?
+          will_shutdown = interval.zero? || shutdown?
 
           @children.each do |child|
             if Process.waitpid(child, Process::WNOHANG)
@@ -174,7 +174,9 @@ module Resque
     def job_processed
       synchronize do
         @jobs_processed += 1
-        shutdown if @jobs_processed > jobs_per_fork
+        if @jobs_processed >= jobs_per_fork
+          shutdown
+        end
       end
     end
 

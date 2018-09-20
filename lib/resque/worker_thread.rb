@@ -44,7 +44,7 @@ module Resque
         if work_one_job(&@block)
           worker.job_processed
         else
-          break if interval.zero?
+          break if interval.zero? or worker.shutdown?
           worker.set_procline
           log_with_severity :debug, "Sleeping for #{interval} seconds"
           sleep interval

@@ -4,6 +4,7 @@ require 'bundler/setup'
 require 'minitest/autorun'
 require 'redis/namespace'
 require 'mocha/setup'
+require 'connection_pool'
 
 $dir = File.dirname(File.expand_path(__FILE__))
 $LOAD_PATH.unshift $dir + '/../lib'
@@ -65,7 +66,9 @@ end
 kill_test_redis
 puts "Starting redis for testing at localhost:9736..."
 `redis-server #{$dir}/redis-test.conf`
-Resque.redis = 'localhost:9736'
+
+create_redis = ->{ Redis.new(host: 'localhost', port: 9736, thread_safe: true) }
+Resque.redis = ConnectionPool.wrap(size: 8, timeout: 5, &create_redis)
 
 ##
 # Helper to perform job classes

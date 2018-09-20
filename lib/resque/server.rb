@@ -185,11 +185,20 @@ module Resque
     end
 
     post "/kill/:id" do
-      Resque::WorkerManager.find_thread(params[:id])
-      if request.xhr?
-        "Killed"
+      if thread = Resque::WorkerManager.find_thread(params[:id])
+        thread.kill
+        sleep Resque.heartbeat_interval * 2
+        if request.xhr?
+          "Killed"
+        else
+          redirect u('working')
+        end
       else
-        redirect u('working')
+        if request.xhr?
+          "Killed"
+        else
+          redirect u('working')
+        end
       end
     end
 

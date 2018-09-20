@@ -287,6 +287,7 @@ module Resque
       @heartbeat_thread = Thread.new do
         loop do
           heartbeat!
+          WorkerManager.prune_dead_workers if rand(100) == 1
           signaled = @heartbeat_thread_signal.wait_for_signal(Resque.heartbeat_interval)
           break if signaled
         end

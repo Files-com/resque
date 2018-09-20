@@ -74,11 +74,8 @@ module Resque
         end
       rescue Object => e
         report_failed_job(e)
-      ensure
-        @killed = nil
-        @job_thread = nil
       end
-
+      @killed = @job = @job_thread = nil
       done_working
 
       true

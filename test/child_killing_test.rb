@@ -54,6 +54,8 @@ describe "Resque::Worker" do
     result = Resque.redis.lpop('sigterm-test:result')
     assert_nil result
     assert_child_not_running child_pid
+    assert_equal('Resque::DirtyExit', Resque::Failure.all['exception'])
+    assert_equal('Job was killed', Resque::Failure.all['error'])
   end
 
   it "kills workers via the remote kill mechanism" do

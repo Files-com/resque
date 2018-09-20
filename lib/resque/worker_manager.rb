@@ -2,6 +2,7 @@ module Resque
   module WorkerManager
     class WorkerStatus
       include Resque::WorkerStatMethods
+      attr_reader :host, :pid, :queues
 
       def initialize(worker_id)
         @host, @pid, queues_raw = worker_id.split(':')
@@ -48,7 +49,7 @@ module Resque
       end
 
       def to_s
-        worker_thread_id
+        @worker_thread_id
       end
 
       def ==(other)

@@ -1,6 +1,6 @@
 <% @subtabs = worker_hosts.keys.sort unless worker_hosts.size == 1 %>
 
-<% if params[:id] && worker = Resque::Worker.find(params[:id]) %>
+<% if params[:id] && params[:id] != 'all' && worker = Resque::WorkerManager.find(params[:id]) %>
 
   <h1>Worker <%= worker %></h1>
   <table class='workers'>
@@ -14,12 +14,11 @@
       <th>Failed</th>
     </tr>
     <tr>
-      <% host, pid, queues = worker.to_s.split(':') %>
-      <td><%= host %></td>
-      <td><%= pid %></td>
+      <td><%= worker.host %></td>
+      <td><%= worker.pid %></td>
       <td><span class="time"><%= worker.started %></span></td>
       <td><span class="time"><%= worker.heartbeat %></span></td>
-      <td class='queues'><%= queues.split(',').map { |q| '<a class="queue-tag" href="' + u("/queues/#{q}") + '">' + q + '</a>'}.join('') %></td>
+      <td class='queues'><%= queues.map { |q| '<a class="queue-tag" href="' + u("/queues/#{q}") + '">' + q + '</a>'}.join('') %></td>
       <td><%= worker.processed %></td>
       <td><%= worker.failed %></td>
     </tr>
@@ -34,7 +33,7 @@
   <% if worker_hosts.size == 1 || params[:id] == 'all' %>
     <% workers = Resque.workers %>
   <% else %>
-    <% workers = worker_hosts[params[:id]].map { |id| Resque::Worker.find(id) } %>
+    <% workers = worker_hosts[params[:id]].map { |id| Resque::WorkerManager.find(id) } %>
   <% end %>
 
   <h1 class='wi'><%= workers.size %> Workers</h1>

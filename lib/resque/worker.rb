@@ -123,16 +123,16 @@ module Resque
         (1..worker_count).map { fork_worker_process(interval, &block) }
 
         loop do
-          break if shutdown?
+          will_shutdown = interval.zero? or shutdown?
+
           @children.each do |child|
             if Process.waitpid(child, Process::WNOHANG)
               @children.delete(child)
-              break if interval.zero?
-              fork_worker_process(interval, &block)
+              fork_worker_process(interval, &block) unless will_shutdown
             end
           end
 
-          break if interval.zero? and @children.size == 0
+          break if will_shutdown and @children.size == 0
           sleep interval
         end
       end

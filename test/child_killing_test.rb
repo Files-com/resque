@@ -38,7 +38,7 @@ describe "Resque::Worker" do
     child_pid = start_status[1].to_i
     assert child_pid > 0, "worker child process not created"
 
-    [worker_pid, child_pid]
+    worker_pid
   end
 
   def assert_child_not_running(child_pid)
@@ -57,7 +57,7 @@ describe "Resque::Worker" do
   end
 
   it "kills workers via the remote kill mechanism" do
-    worker_pid, child_pid = start_worker
+    worker_pid = start_worker
     thread = Resque::WorkerManager.find_thread("#{hostname}:#{worker_pid}:long_running_job:1")
     thread.kill
     sleep 3
@@ -67,7 +67,7 @@ describe "Resque::Worker" do
   end
 
   it "runs if not killed" do
-    worker_pid, child_pid = start_worker
+    worker_pid = start_worker
 
     result = Resque.redis.blpop('sigterm-test:result')
     assert 'Finished Normally' == result.last

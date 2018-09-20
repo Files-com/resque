@@ -5,9 +5,9 @@ module Resque
       attr_reader :host, :pid, :queues
 
       def initialize(worker_id)
-        @host, @pid, queues_raw = worker_id.split(':')
+        @worker_id = worker_id.gsub(/worker:/, "")
+        @host, @pid, queues_raw = @worker_id.split(':')
         @queues = queues_raw.split(',')
-        @worker_id = worker_id
       end
 
       def to_s
@@ -40,8 +40,8 @@ module Resque
       attr_reader :worker, :job, :thread_id
 
       def initialize(worker_thread_id, job = nil)
-        @worker_thread_id = worker_thread_id
-        @host, @pid, queues_raw, @thread_id = worker_thread_id.split(':')
+        @worker_thread_id = worker_thread_id.gsub(/worker:/, "")
+        @host, @pid, queues_raw, @thread_id = @worker_thread_id.split(':')
         @queues = queues_raw.split(',')
         @job = Resque.decode(job) if job
         worker_id = Resque::WorkerManager.worker_id_from_thread_id(@worker_thread_id)

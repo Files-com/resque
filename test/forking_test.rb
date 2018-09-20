@@ -7,7 +7,6 @@ describe "Resque::Worker" do
     @queue = :jobs
 
     def self.perform
-      Resque.redis.reconnect # get its own connection
       Resque.redis.rpush('fastjob', "#{Process.pid}")
     end
   end
@@ -16,11 +15,10 @@ describe "Resque::Worker" do
     Resque.enqueue FastJob
 
     worker_pid = Kernel.fork do
-      Resque.redis.reconnect
       worker = Resque::Worker.new(:jobs)
       worker.jobs_per_fork = 16
       worker.worker_count = 4
-      worker.thread_count = 1
+      worker.thread_count = 4
       worker.work
     end
 
@@ -36,7 +34,7 @@ describe "Resque::Worker" do
 
     47.times { # one job is used by the startup
       Resque.enqueue FastJob
-      name, pid_tid = Resque.redis.blpop('fastjob', 5)
+      _name, pid_tid = Resque.redis.blpop('fastjob', 5)
       refute_nil pid_tid
       pid, tid = pid_tid.split(":")
       worker_pids[pid] = true

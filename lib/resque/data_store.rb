@@ -71,11 +71,6 @@ module Resque
       @redis.inspect
     end
 
-    # Force a reconnect to Redis.
-    def reconnect
-      @redis._client.reconnect
-    end
-
     # Returns an array of all known Resque keys in Redis. Redis' KEYS operation
     # is O(N) for the keyspace, so be careful - this can be slow for big databases.
     def all_resque_keys

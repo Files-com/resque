@@ -80,8 +80,6 @@ module Resque
       if ENV['PIDFILE']
         File.open(ENV['PIDFILE'], 'w') { |f| f << pid }
       end
-
-      self.reconnect if ENV['BACKGROUND']
     end
 
     WILDCARDS = ['*', '?', '{', '}', '[', ']'].freeze
@@ -148,9 +146,7 @@ module Resque
 
     def fork_worker_process(interval, &block)
       @children << fork {
-        if reconnect
-          worker_process(interval, &block)
-        end
+        worker_process(interval, &block)
         exit!
       }
       srand # Reseed after fork
@@ -203,23 +199,6 @@ module Resque
       log_with_severity :error, "Error reserving job: #{e.inspect}"
       log_with_severity :error, e.backtrace.join("\n")
       raise e
-    end
-
-    def reconnect
-      tries = 0
-      begin
-        data_store.reconnect
-        true
-      rescue Redis::BaseConnectionError
-        if (tries += 1) <= 3
-          log_with_severity :error, "Error reconnecting to Redis; retrying"
-          sleep(tries)
-          retry
-        else
-          log_with_severity :error, "Error reconnecting to Redis; quitting"
-          false
-        end
-      end
     end
 
     def startup

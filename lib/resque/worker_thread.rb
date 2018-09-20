@@ -8,7 +8,7 @@ module Resque
       @worker = worker
       @interval = interval
       @block = block
-      @job_thread = nil
+      @job_thread = @job = nil
       @killed = false
     end
 

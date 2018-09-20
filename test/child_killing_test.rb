@@ -7,7 +7,6 @@ describe "Resque::Worker" do
     @queue = :long_running_job
 
     def self.perform
-      Resque.redis.reconnect # get its own connection
       Resque.redis.rpush('long-test:start', Process.pid)
       sleep 5
       Resque.redis.rpush('long-test:result', 'Finished Normally')
@@ -24,7 +23,6 @@ describe "Resque::Worker" do
     Resque.enqueue LongRunningJob
 
     worker_pid = Kernel.fork do
-      Resque.redis.reconnect
       worker = Resque::Worker.new(:long_running_job)
       suppress_warnings do
         worker.work(0)

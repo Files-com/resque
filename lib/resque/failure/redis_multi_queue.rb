@@ -68,7 +68,7 @@ module Resque
 
       def self.clear(queue = :failed)
         queues = queue ? Array(queue) : self.queues
-        queues.each { |queue| data_store.clear_failed_queue(queue) }
+        queues.each { |q| data_store.clear_failed_queue(q) }
       end
 
       def self.requeue(id, queue = :failed)

@@ -20,10 +20,6 @@ module Resque
       worker.data_store
     end
 
-    def jobs_per_fork
-      @jobs_per_fork ||= worker.jobs_per_fork
-    end
-
     def log_with_severity(severity, message)
       worker.log_with_severity(severity, "[Thread #{@id}] #{message}")
     end
@@ -57,7 +53,7 @@ module Resque
     end
 
     def work_one_job(&block)
-      return false if worker.paused? or worker.shutdown? or worker.jobs_processed >= jobs_per_fork
+      return false if worker.paused? or worker.shutdown?
       return false unless @job = worker.reserve
 
       worker.set_procline

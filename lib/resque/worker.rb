@@ -174,6 +174,7 @@ module Resque
     def job_processed
       synchronize do
         @jobs_processed += 1
+        shutdown if @jobs_processed > jobs_per_fork
       end
     end
 

@@ -53,7 +53,7 @@ module Resque
           log_with_severity :debug, "Sleeping for #{interval} seconds"
           sleep interval
         end
-        break if worker.jobs_processed >= jobs_per_fork
+        break if worker.shutdown? or worker.jobs_processed >= jobs_per_fork
       end
     end
 

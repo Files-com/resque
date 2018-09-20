@@ -148,6 +148,15 @@ class BadJob
   end
 end
 
+class SlowJob
+  def self.perform
+    puts "Rpushing..."
+    Resque.redis.rpush('slowjob', 'started')
+    sleep 100
+    raise "Bad job!"
+  end
+end
+
 class GoodJob
   def self.perform(name)
     "Good job, #{name}"

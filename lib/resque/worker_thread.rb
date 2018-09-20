@@ -4,10 +4,12 @@ module Resque
     attr_accessor :job
 
     def initialize(worker, id = 0, interval = 0, &block)
-      @id = id
+      @id = id.to_s
       @worker = worker
       @interval = interval
       @block = block
+      @job_thread = nil
+      @killed = false
     end
 
     def to_s
@@ -27,7 +29,10 @@ module Resque
     end
 
     def kill
-      @job_thread.kill if @job_thread
+      if @job_thread
+        @killed = true
+        @job_thread.kill
+      end
     end
 
     def payload_class_name
@@ -65,9 +70,14 @@ module Resque
       begin
         @job_thread = Thread.new { perform(&block) }
         @job_thread.join
-        @job_thread = nil
+        if @job_thread.status.nil? or @killed
+          raise DirtyExit.new("Job was killed")
+        end
       rescue Object => e
         report_failed_job(e)
+      ensure
+        @killed = nil
+        @job_thread = nil
       end
 
       done_working

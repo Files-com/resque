@@ -34,12 +34,12 @@ describe "rake tasks" do
         Resque.logger = Logger.new(messages)
         Resque.logger.level = Logger::ERROR
         Resque.enqueue_to(:jobs, SomeJob, 20, '/tmp')
-        Resque::Worker.any_instance.stubs(:shutdown?).returns(false, true) # Process one job and then quit
       end
 
       it "triggers DEBUG level logging when VVERBOSE is set to 1" do
         ENV['VVERBOSE'] = '1'
         ENV['QUEUES'] = 'jobs'
+        ENV['JOBS_PER_FORK'] = "0"
         run_rake_task("resque:work")
         assert_includes messages.string, 'Starting worker' # Include an info level statement
         assert_includes messages.string, 'Registered signals' # Includes a debug level statement
@@ -48,6 +48,7 @@ describe "rake tasks" do
       it "triggers INFO level logging when VERBOSE is set to 1" do
         ENV['VERBOSE'] = '1'
         ENV['QUEUES'] = 'jobs'
+        ENV['JOBS_PER_FORK'] = "0"
         run_rake_task("resque:work")
         assert_includes messages.string, 'Starting worker' # Include an info level statement
         refute_includes messages.string, 'Registered signals' # Does not a debug level statement

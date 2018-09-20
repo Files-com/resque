@@ -56,6 +56,8 @@ module Resque
 
       @heartbeat_thread = nil
       @heartbeat_thread_signal = nil
+      @kill_watcher_thread = nil
+      @kill_watcher_thread_signal = nil
 
       @worker_threads = []
 
@@ -152,12 +154,13 @@ module Resque
         exit!
       }
       srand # Reseed after fork
-      procline "Master Process.  Worker Children PIDs: #{@children.join(",")} Last Fork at #{Time.now.to_i}"
+      procline "Master Process - Worker Children PIDs: #{@children.join(",")} - Last Fork at #{Time.now.to_i}"
     end
 
     def worker_process(interval, &block)
       @mutex = Mutex.new
       @jobs_processed = 0
+      start_kill_watcher_thread
       @worker_threads = (1..thread_count).map { |i| WorkerThread.new(self, i, interval, &block) }
       @worker_threads.map(&:spawn).map(&:join)
     end
@@ -252,7 +255,7 @@ module Resque
     end
 
     def kill_worker_thread(id)
-      @worker_threads.select { |thread| thread.id == id }.each(&:kill)
+      @worker_threads.select { |thread| thread.id == id }.each { |t| t.kill }
     end
 
     def kill_worker_threads
@@ -292,6 +295,20 @@ module Resque
       @@all_heartbeat_threads << @heartbeat_thread
     end
 
+    def start_kill_watcher_thread
+      @kill_watcher_thread_signal = Resque::ThreadSignal.new
+
+      @kill_watcher_thread = Thread.new do
+        loop do
+          data_store.check_for_kill_signals(self)
+          signaled = @kill_watcher_thread_signal.wait_for_signal(Resque.heartbeat_interval)
+          break if signaled
+        end
+      end
+
+      @@all_heartbeat_threads << @kill_watcher_thread
+    end
+
     def paused?
       @paused
     end
@@ -311,9 +328,13 @@ module Resque
     end
 
     def kill_background_threads
-      if @heartbeat_thread
+      if @heartbeat_thread_signal
         @heartbeat_thread_signal.signal
         @heartbeat_thread.join
+      end
+      if @kill_watcher_thread
+        @kill_watcher_thread_signal.signal
+        @kill_watcher_thread.join
       end
     end
 

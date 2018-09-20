@@ -253,7 +253,7 @@ module Resque
   end
 
   def to_s
-    "Resque Client connected to #{redis_id}"
+    "Resque Client"
   end
 
   attr_accessor :inline

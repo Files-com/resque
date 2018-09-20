@@ -53,12 +53,11 @@ module Resque
           log_with_severity :debug, "Sleeping for #{interval} seconds"
           sleep interval
         end
-        break if worker.shutdown? or worker.jobs_processed >= jobs_per_fork
       end
     end
 
     def work_one_job(&block)
-      return false if worker.paused?
+      return false if worker.paused? or worker.shutdown? or worker.jobs_processed >= jobs_per_fork
       return false unless @job = worker.reserve
 
       worker.set_procline

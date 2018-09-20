@@ -19,7 +19,7 @@ describe "Resque::Worker" do
       Resque.redis.reconnect
       worker = Resque::Worker.new(:jobs)
       worker.jobs_per_fork = 16
-      worker.worker_count = 1
+      worker.worker_count = 4
       worker.thread_count = 1
       worker.work
     end
@@ -44,6 +44,6 @@ describe "Resque::Worker" do
     }
     Process.kill('TERM', master_pid)
     Process.waitpid(master_pid)
-    assert_equal 3, worker_pids.size
+    assert_includes 3..5, worker_pids.size
   end
 end

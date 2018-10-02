@@ -184,6 +184,24 @@ module Resque
       redirect u('queues')
     end
 
+    post "/kill/:id" do
+      if thread = Resque::WorkerManager.find_thread(params[:id])
+        thread.kill
+        sleep Resque.heartbeat_interval * 2
+        if request.xhr?
+          "Killed"
+        else
+          redirect u('working')
+        end
+      else
+        if request.xhr?
+          "Killed"
+        else
+          redirect u('working')
+        end
+      end
+    end
+
     get "/failed/?" do
       if Resque::Failure.url
         redirect Resque::Failure.url

@@ -1,20 +1,22 @@
 require 'rubygems'
+require 'tempfile'
 require 'bundler/setup'
 require 'minitest/autorun'
 require 'redis/namespace'
 require 'mocha/setup'
+require 'connection_pool'
 
 $dir = File.dirname(File.expand_path(__FILE__))
 $LOAD_PATH.unshift $dir + '/../lib'
-ENV['TERM_CHILD'] = "1"
 require 'resque'
-$TEST_PID=Process.pid
+$TEST_PID = Process.pid
+
+ENV['JOBS_PER_FORK'] = "100"
 
 begin
   require 'leftright'
 rescue LoadError
 end
-
 
 #
 # make sure we can run redis
@@ -30,26 +32,27 @@ end
 #
 # start our own redis when the tests start,
 # kill it when they end
-#
 
-MiniTest::Unit.after_tests do
-  if Process.pid == $TEST_PID
-    processes = `ps -A -o pid,command | grep [r]edis-test`.split("\n")
-    pids = processes.map { |process| process.split(" ")[0] }
+def kill_test_redis
+  processes = `ps -A -o pid,command | grep "[r]edis.*9736"`.split("\n")
+  pids = processes.map { |process| process.split(" ")[0] }
+  if pids.size > 0
     puts "Killing test redis server..."
-    pids.each { |pid| Process.kill("TERM", pid.to_i) }
-    system("rm -f #{$dir}/dump.rdb #{$dir}/dump-cluster.rdb")
+    pids.each { |pid| Process.kill("KILL", pid.to_i) }
   end
+  system("rm -f #{$dir}/dump.rdb #{$dir}/dump-cluster.rdb")
 end
 
 class GlobalSpecHooks < MiniTest::Spec
   def setup
     super
     reset_logger
-    Resque.redis.redis.flushall
-    Resque.before_first_fork = nil
-    Resque.before_fork = nil
-    Resque.after_fork = nil
+    begin
+      Resque.redis.redis.flushall
+    rescue Errno::ECONNREFUSED
+      sleep 0.1
+      retry
+    end
   end
 
   def teardown
@@ -60,19 +63,12 @@ class GlobalSpecHooks < MiniTest::Spec
   register_spec_type(/.*/, self)
 end
 
+kill_test_redis
+puts "Starting redis for testing at localhost:9736..."
+`redis-server #{$dir}/redis-test.conf`
 
-if ENV.key? 'RESQUE_DISTRIBUTED'
-  require 'redis/distributed'
-  puts "Starting redis for testing at localhost:9736 and localhost:9737..."
-  `redis-server #{$dir}/redis-test.conf`
-  `redis-server #{$dir}/redis-test-cluster.conf`
-  r = Redis::Distributed.new(['redis://localhost:9736', 'redis://localhost:9737'])
-  Resque.redis = Redis::Namespace.new :resque, :redis => r
-else
-  puts "Starting redis for testing at localhost:9736..."
-  `redis-server #{$dir}/redis-test.conf`
-  Resque.redis = 'localhost:9736'
-end
+create_redis = ->{ Redis.new(host: 'localhost', port: 9736, thread_safe: true) }
+Resque.redis = ConnectionPool.wrap(size: 8, timeout: 5, &create_redis)
 
 ##
 # Helper to perform job classes
@@ -91,7 +87,7 @@ end
 module AssertInWorkBlock
   # if a block is given, ensure that it is run, and that any assertion
   # failures that occur inside it propagate up to the test.
-  def work(*args, &block)
+  def worker_thread(*args, &block)
     return super unless block_given?
 
     ex = catch(:exception_in_block) do
@@ -113,6 +109,15 @@ module AssertInWorkBlock
     ex && raise(ex)
   end
 end
+
+module WorkOneJob
+  def work_one_job(&block)
+    @worker_threads = []
+    wt = Resque::WorkerThread.new(self, 0, 0, &block)
+    wt.work_one_job(&block)
+  end
+end
+Resque::Worker.include(WorkOneJob)
 
 #
 # fixture classes
@@ -142,6 +147,15 @@ end
 
 class BadJob
   def self.perform
+    raise "Bad job!"
+  end
+end
+
+class SlowJob
+  def self.perform
+    puts "Rpushing..."
+    Resque.redis.rpush('slowjob', 'started')
+    sleep 100
     raise "Bad job!"
   end
 end
@@ -249,12 +263,12 @@ ensure
 end
 
 def without_forking
-  orig_fork_per_job = ENV['FORK_PER_JOB']
+  orig_dont_fork = ENV['DONT_FORK']
   begin
-    ENV['FORK_PER_JOB'] = 'false'
+    ENV['DONT_FORK'] = "1"
     yield
   ensure
-    ENV['FORK_PER_JOB'] = orig_fork_per_job
+    ENV['DONT_FORK'] = orig_dont_fork
   end
 end
 

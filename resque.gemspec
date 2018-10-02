@@ -4,20 +4,20 @@ require 'resque/version'
 Gem::Specification.new do |s|
   s.name              = "resque"
   s.version           = Resque::Version
-  s.summary           = "Resque is a Redis-backed queueing system."
-  s.homepage          = "http://resque.github.io/"
-  s.email             = "steve@steveklabnik.com"
-  s.authors           = [ "Chris Wanstrath", "Steve Klabnik", "Terence Lee" ]
+  s.summary           = "Action Verb's Resque fork"
+  s.homepage          = "https://www.actionverb.com/open-source/resque"
+  s.email             = "kevin@actionverb.com"
+  s.authors           = [ "Chris Wanstrath", "Steve Klabnik", "Terence Lee", "Kevin Bombino" ]
 
-  s.files             = %w( README.markdown Rakefile LICENSE HISTORY.md )
+  s.files             = %w( README.md Rakefile LICENSE )
   s.files            += Dir.glob("lib/**/*")
   s.files            += Dir.glob("bin/**/*")
   s.files            += Dir.glob("man/**/*")
   s.files            += Dir.glob("tasks/**/*")
-  s.executables       = [ "resque", "resque-web" ]
+  s.executables       = []
   s.license           = 'MIT'
 
-  s.extra_rdoc_files  = [ "LICENSE", "README.markdown" ]
+  s.extra_rdoc_files  = [ "LICENSE", "README.md" ]
   s.rdoc_options      = ["--charset=UTF-8"]
 
   s.add_dependency "redis-namespace", "~> 1.6"
@@ -25,6 +25,7 @@ Gem::Specification.new do |s|
   s.add_dependency "sinatra", ">= 0.9.2"
   s.add_dependency "multi_json", "~> 1.0"
   s.add_dependency "mono_logger", "~> 1.0"
+  s.add_dependency "connection_pool", "~> 2.2.2"
 
   s.description = <<description
     Resque is a Redis-backed Ruby library for creating background jobs,

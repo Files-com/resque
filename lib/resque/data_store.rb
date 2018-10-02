@@ -1,6 +1,4 @@
 module Resque
-  # An interface between Resque's persistence and the actual
-  # implementation.
   class DataStore
     extend Forwardable
 
@@ -34,20 +32,22 @@ module Resque
                                           :update_item_in_failed_queue,
                                           :remove_from_failed_queue
     def_delegators :@workers, :worker_ids,
-                              :workers_map,
-                              :get_worker_payload,
+                              :worker_threads_map,
+                              :get_worker_thread_payload,
                               :worker_exists?,
                               :register_worker,
                               :worker_started,
                               :unregister_worker,
+                              :kill_worker_thread,
+                              :check_for_kill_signals,
                               :heartbeat,
                               :heartbeat!,
                               :remove_heartbeat,
                               :all_heartbeats,
                               :acquire_pruning_dead_worker_lock,
-                              :set_worker_payload,
+                              :set_worker_thread_payload,
                               :worker_start_time,
-                              :worker_done_working
+                              :worker_thread_done_working
 
       def_delegators :@stats_access, :clear_stat,
                                      :decremet_stat,
@@ -69,11 +69,6 @@ module Resque
     # Probably should be private, but was public so must stay public
     def identifier
       @redis.inspect
-    end
-
-    # Force a reconnect to Redis.
-    def reconnect
-      @redis._client.reconnect
     end
 
     # Returns an array of all known Resque keys in Redis. Redis' KEYS operation
@@ -214,16 +209,19 @@ module Resque
         Array(@redis.smembers(:workers))
       end
 
-      # Given a list of worker ids, returns a map of those ids to the worker's value
-      # in redis, even if that value maps to nil
-      def workers_map(worker_ids)
-        redis_keys = worker_ids.map { |id| "worker:#{id}" }
-        @redis.mapped_mget(*redis_keys)
+      def worker_threads_map(worker_ids)
+        thread_redis_keys = worker_ids.map { |id| redis_key_for_worker_threads(id) }.map { |key|
+          @redis.smembers(key)
+        }.flatten.compact.map { |id| redis_key_for_worker_thread(id) }
+        if thread_redis_keys.any?
+          @redis.mapped_mget(*thread_redis_keys)
+        else
+          []
+        end
       end
 
-      # return the worker's payload i.e. job
-      def get_worker_payload(worker_id)
-        @redis.get("worker:#{worker_id}")
+      def get_worker_thread_payload(worker_thread_id)
+        @redis.get("worker:#{worker_thread_id}")
       end
 
       def worker_exists?(worker_id)
@@ -233,6 +231,7 @@ module Resque
       def register_worker(worker)
         @redis.pipelined do
           @redis.sadd(:workers, worker)
+          @redis.del(redis_key_for_worker_threads(worker))
           worker_started(worker)
         end
       end
@@ -244,6 +243,7 @@ module Resque
       def unregister_worker(worker, &block)
         @redis.pipelined do
           @redis.srem(:workers, worker)
+          @redis.del(redis_key_for_worker_threads(worker))
           @redis.del(redis_key_for_worker(worker))
           @redis.del(redis_key_for_worker_start_time(worker))
           @redis.hdel(HEARTBEAT_KEY, worker.to_s)
@@ -273,17 +273,30 @@ module Resque
         @redis.set(redis_key_for_worker_pruning, worker.to_s, :ex => expiry, :nx => true)
       end
 
-      def set_worker_payload(worker, data)
-        @redis.set(redis_key_for_worker(worker), data)
+      def check_for_kill_signals(worker)
+        while id = @redis.lpop(redis_key_for_worker_kill(worker))
+          worker.kill_worker_thread(id)
+        end
+      end
+
+      def kill_worker_thread(worker, thread_id)
+        @redis.rpush(redis_key_for_worker_kill(worker), thread_id)
+      end
+
+      def set_worker_thread_payload(worker_thread, data)
+        @redis.pipelined do
+          @redis.sadd(redis_key_for_worker_threads(worker_thread.worker), worker_thread)
+          @redis.set(redis_key_for_worker_thread(worker_thread), data)
+        end
       end
 
       def worker_start_time(worker)
         @redis.get(redis_key_for_worker_start_time(worker))
       end
 
-      def worker_done_working(worker, &block)
+      def worker_thread_done_working(worker_thread, &block)
         @redis.pipelined do
-          @redis.del(redis_key_for_worker(worker))
+          @redis.del(redis_key_for_worker_thread(worker_thread))
           block.call
         end
       end
@@ -294,8 +307,20 @@ module Resque
         "worker:#{worker}"
       end
 
+      def redis_key_for_worker_kill(worker)
+        "#{redis_key_for_worker(worker)}:kills"
+      end
+
+      def redis_key_for_worker_thread(worker_thread)
+        "worker:#{worker_thread}"
+      end
+
       def redis_key_for_worker_start_time(worker)
         "#{redis_key_for_worker(worker)}:started"
+      end
+
+      def redis_key_for_worker_threads(worker)
+        "#{redis_key_for_worker(worker)}:threads"
       end
 
       def redis_key_for_worker_pruning

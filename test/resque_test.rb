@@ -266,16 +266,18 @@ describe "Resque" do
 
       @worker = Resque::Worker.new(:jobs)
       @worker.register_worker
-      2.times { @worker.process }
+      2.times { @worker.work_one_job }
 
-      job = @worker.reserve
-      @worker.working_on job
+      wt = Resque::WorkerThread.new(@worker)
+      @worker.instance_variable_set(:@worker_threads, [ wt ])
+      wt.job = @worker.reserve
+      wt.set_payload
 
       stats = Resque.info
       assert_equal 1, stats[:working]
       assert_equal 1, stats[:workers]
 
-      @worker.done_working
+      wt.done_working
 
       stats = Resque.info
       assert_equal 3, stats[:queues]

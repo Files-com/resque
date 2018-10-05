@@ -2,11 +2,11 @@ module Resque
   module WorkerManager
     class WorkerStatus
       include Resque::WorkerStatMethods
-      attr_reader :host, :pid, :queues
+      attr_reader :host, :pid, :queues, :worker_count, :thread_count, :jobs_per_fork
 
       def initialize(worker_id)
         @worker_id = worker_id.gsub(/worker:/, "")
-        @host, @pid, queues_raw = @worker_id.split(':')
+        @host, @pid, queues_raw, @worker_count, @thread_count, @jobs_per_fork = @worker_id.split(':')
         @queues = queues_raw.gsub("~", ":").split(',')
       end
 
@@ -41,7 +41,7 @@ module Resque
 
       def initialize(worker_thread_id, job = nil)
         @worker_thread_id = worker_thread_id.gsub(/worker:/, "")
-        @host, @pid, queues_raw, @thread_id = @worker_thread_id.split(':')
+        @host, @pid, queues_raw, @thread_count, @jobs_per_fork, @thread_id = @worker_thread_id.split(':')
         @queues = queues_raw.gsub("~", ":").split(',')
         @job = Resque.decode(job) if job
         worker_id = Resque::WorkerManager.worker_id_from_thread_id(@worker_thread_id)

@@ -414,7 +414,7 @@ describe "Resque::Worker" do
   end
 
   it "has a unique id" do
-    assert_equal "#{`hostname`.chomp}:#{$$}:jobs", @worker.to_s
+    assert_equal "#{`hostname`.chomp}:#{$$}:jobs:1:1:100", @worker.to_s
   end
 
   it "complains if no queues are given" do

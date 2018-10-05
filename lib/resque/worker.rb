@@ -385,7 +385,7 @@ module Resque
     end
 
     def to_s
-      @to_s ||= "#{hostname}:#{pid}:#{@queues.join(',').gsub(":", "~")}"
+      @to_s ||= "#{hostname}:#{pid}:#{@queues.join(',').gsub(":", "~")}:#{worker_count}:#{thread_count}:#{jobs_per_fork}"
     end
     alias_method :id, :to_s
 

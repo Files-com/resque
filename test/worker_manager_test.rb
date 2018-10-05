@@ -149,4 +149,11 @@ describe "Resque::WorkerManager" do
 
     assert_match(/Redis::CannotConnectError/, exception_caught.message)
   end
+
+  describe ".worker_id_from_thread_id" do
+    it "works" do
+      worker_id = "#{`hostname`.chomp}:#{$$}:jobs:1:1:100"
+      assert_equal Resque::WorkerManager.worker_id_from_thread_id("#{worker_id}:1"), worker_id
+    end
+  end
 end

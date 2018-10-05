@@ -2,13 +2,16 @@
 
 <% if params[:id] && params[:id] != 'all' && worker = Resque::WorkerManager.find(params[:id]) %>
 
-  <h1>Worker <%= worker %></h1>
+  <h1>Master Worker</h1>
   <table class='workers'>
     <tr>
       <th>Host</th>
       <th>Pid</th>
       <th>Started</th>
       <th>Heartbeat</th>
+      <th># Workers</th>
+      <th># Threads</th>
+      <th>Jobs Per Fork</th>
       <th>Queues</th>
       <th>Processed</th>
       <th>Failed</th>
@@ -18,6 +21,9 @@
       <td><%= worker.pid %></td>
       <td><span class="time"><%= worker.started %></span></td>
       <td><span class="time"><%= worker.heartbeat %></span></td>
+      <td><%= worker.worker_count %></td>
+      <td><%= worker.thread_count %></td>
+      <td><%= worker.jobs_per_fork %></td>
       <td class='queues'><%= worker.queues.map { |q| '<a class="queue-tag" href="' + u("/queues/#{q.split(":").first}") + '">' + q + '</a>'}.join('') %></td>
       <td><%= worker.processed %></td>
       <td><%= worker.failed %></td>
@@ -41,12 +47,18 @@
   <table class='workers'>
     <tr>
       <th>Where</th>
+      <th># Workers</th>
+      <th># Threads</th>
+      <th>Jobs Per Fork</th>
       <th>Queues</th>
     </tr>
     <% for worker in (workers = workers.sort_by { |w| w.to_s }) %>
     <tr>
 
       <td class='where'><a href="<%=u "workers/#{worker}"%>"><%= worker.host %>:<%= worker.pid %></a></td>
+      <td><%= worker.worker_count %></td>
+      <td><%= worker.thread_count %></td>
+      <td><%= worker.jobs_per_fork %></td>
       <td class='queues'><%= worker.queues.map { |q| '<a class="queue-tag" href="' + u("/queues/#{q}") + '">' + q + '</a>'}.join('') %></td>
     </tr>
     <% end %>

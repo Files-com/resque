@@ -7,7 +7,7 @@ module Resque
       def initialize(worker_id)
         @worker_id = worker_id.gsub(/worker:/, "")
         @host, @pid, queues_raw = @worker_id.split(':')
-        @queues = queues_raw.split(',')
+        @queues = queues_raw.gsub("~", ":").split(',')
       end
 
       def to_s
@@ -42,7 +42,7 @@ module Resque
       def initialize(worker_thread_id, job = nil)
         @worker_thread_id = worker_thread_id.gsub(/worker:/, "")
         @host, @pid, queues_raw, @thread_id = @worker_thread_id.split(':')
-        @queues = queues_raw.split(',')
+        @queues = queues_raw.gsub("~", ":").split(',')
         @job = Resque.decode(job) if job
         worker_id = Resque::WorkerManager.worker_id_from_thread_id(@worker_thread_id)
         @worker = WorkerStatus.new(worker_id)

@@ -58,7 +58,7 @@ describe "Resque::Worker" do
 
   it "kills workers via the remote kill mechanism" do
     worker_pid, _child_pid = start_worker
-    thread = Resque::WorkerManager.find_thread("#{hostname}:#{worker_pid}:long_running_job:1")
+    thread = Resque::WorkerManager.find_thread("#{hostname}:#{worker_pid}:long_running_job:0")
     thread.kill
     sleep 3
 
@@ -69,7 +69,7 @@ describe "Resque::Worker" do
   end
 
   it "runs if not killed" do
-    worker_pid, _child_pid = start_worker
+    _worker_pid, _child_pid = start_worker
 
     result = Resque.redis.blpop('long-test:result')
     assert 'Finished Normally' == result.last

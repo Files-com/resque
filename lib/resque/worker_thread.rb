@@ -3,9 +3,10 @@ module Resque
     attr_reader :id, :worker, :interval
     attr_accessor :job
 
-    def initialize(worker, id = 0, interval = 0, &block)
+    def initialize(worker, worker_index = 0, id = 0, interval = 0, &block)
       @id = id.to_s
       @worker = worker
+      @worker_index = worker_index
       @interval = interval
       @block = block
       @job_thread = @job = nil
@@ -18,6 +19,10 @@ module Resque
 
     def data_store
       worker.data_store
+    end
+
+    def global_index
+      @id.to_i * worker.thread_count + @worker_index
     end
 
     def log_with_severity(severity, message)
@@ -54,7 +59,7 @@ module Resque
 
     def work_one_job(&block)
       return false if worker.paused? or worker.shutdown?
-      return false unless @job = worker.reserve
+      return false unless @job = worker.reserve(global_index)
 
       worker.set_procline
       set_payload

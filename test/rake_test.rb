@@ -57,16 +57,6 @@ describe "rake tasks" do
 
   end
 
-  describe 'resque:workers' do
-
-    it 'requires COUNT environment variable' do
-      assert_system_exit("set COUNT env var, e.g. $ COUNT=2 rake resque:workers") do
-        run_rake_task("resque:workers")
-      end
-    end
-
-  end
-
   def run_rake_task(name)
     Rake::Task[name].reenable
     Rake.application.invoke_task(name)

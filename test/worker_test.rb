@@ -336,6 +336,83 @@ describe "Resque::Worker" do
     assert_equal 0, Resque.size(:test_two)
   end
 
+  describe "if a colon is used in the queue list" do
+    before do
+      5.times {
+        Resque::Job.create(:slow, GoodJob)
+        Resque::Job.create(:medium, GoodJob)
+        Resque::Job.create(:fast, GoodJob)
+      }
+
+      @worker = Resque::Worker.new("slow:2","medium:4","fast")
+      @worker.jobs_per_fork = 1
+    end
+
+    it "when index 0/5, 1 job ran" do
+      @worker.reserve(0, 5)
+
+      assert_equal 4, Resque.size(:slow)
+      assert_equal 5, Resque.size(:medium)
+      assert_equal 5, Resque.size(:fast)
+    end
+
+    it "when index 1/5, 1 job ran" do
+      @worker.reserve(1, 5)
+
+      assert_equal 4, Resque.size(:slow)
+      assert_equal 5, Resque.size(:medium)
+      assert_equal 5, Resque.size(:fast)
+    end
+
+    it "when index 2/5, 1 job ran" do
+      @worker.reserve(2, 5)
+
+      assert_equal 5, Resque.size(:slow)
+      assert_equal 4, Resque.size(:medium)
+      assert_equal 5, Resque.size(:fast)
+    end
+
+    it "when index 4/5, 1 job ran" do
+      @worker.reserve(4, 5)
+
+      assert_equal 5, Resque.size(:slow)
+      assert_equal 4, Resque.size(:medium)
+      assert_equal 5, Resque.size(:fast)
+    end
+
+    it "when index 0/5, 3 jobs ran" do
+      3.times { @worker.reserve(0, 5) }
+
+      assert_equal 2, Resque.size(:slow)
+      assert_equal 5, Resque.size(:medium)
+      assert_equal 5, Resque.size(:fast)
+    end
+
+    it "when index 0/5, 7 jobs ran" do
+      7.times { @worker.reserve(0, 5) }
+
+      assert_equal 0, Resque.size(:slow)
+      assert_equal 3, Resque.size(:medium)
+      assert_equal 5, Resque.size(:fast)
+    end
+
+    it "when index 1/5, 7 jobs ran" do
+      7.times { @worker.reserve(1, 5) }
+
+      assert_equal 0, Resque.size(:slow)
+      assert_equal 5, Resque.size(:medium)
+      assert_equal 3, Resque.size(:fast)
+    end
+
+    it "when index 2/5, 7 jobs ran" do
+      7.times { @worker.reserve(2, 5) }
+
+      assert_equal 5, Resque.size(:slow)
+      assert_equal 0, Resque.size(:medium)
+      assert_equal 3, Resque.size(:fast)
+    end
+  end
+
   it "has a unique id" do
     assert_equal "#{`hostname`.chomp}:#{$$}:jobs", @worker.to_s
   end
@@ -343,6 +420,12 @@ describe "Resque::Worker" do
   it "complains if no queues are given" do
     assert_raises Resque::NoQueueError do
       Resque::Worker.new
+    end
+  end
+
+  it "complains if queues are given with both a colon and a wildcard" do
+    assert_raises Resque::NoQueueError do
+      Resque::Worker.new("*:5", "foo")
     end
   end
 

@@ -95,6 +95,9 @@ module Resque
       if @queues.nil? || @queues.empty?
         raise NoQueueError.new("Please give each worker at least one queue.")
       end
+      if @has_dynamic_queues and @queues.any? { |queue| queue =~ /:/ }
+        raise NoQueueError.new("You cannot use the colon syntax for defining max workers per queue if you are also using dynamic queues.")
+      end
     end
 
     def queues
@@ -107,9 +110,9 @@ module Resque
     end
 
     def glob_match(list, pattern)
-      list.select do |queue|
+      list.select { |queue|
         File.fnmatch?(pattern, queue)
-      end.sort
+      }.sort
     end
 
     def work(interval = 0.1, &block)
@@ -117,10 +120,10 @@ module Resque
       startup
 
       if !!ENV['DONT_FORK']
-        worker_process(interval, &block)
+        worker_process(interval, 0, &block)
       else
         @children = []
-        (1..worker_count).map { fork_worker_process(interval, &block) }
+        (0..(worker_count - 1)).map { |index| fork_worker_process(interval, index, &block) }
 
         loop do
           will_shutdown = interval.zero? || shutdown?
@@ -144,21 +147,25 @@ module Resque
       unregister_worker(exception)
     end
 
-    def fork_worker_process(interval, &block)
+    def fork_worker_process(interval, index, &block)
       @children << fork {
-        worker_process(interval, &block)
+        worker_process(interval, index, &block)
         exit!
       }
       srand # Reseed after fork
       procline "Master Process - Worker Children PIDs: #{@children.join(",")} - Last Fork at #{Time.now.to_i}"
     end
 
-    def worker_process(interval, &block)
+    def worker_process(interval, index, &block)
       @mutex = Mutex.new
       @jobs_processed = 0
       start_kill_watcher_thread
-      @worker_threads = (1..thread_count).map { |i| WorkerThread.new(self, i, interval, &block) }
+      @worker_threads = (0..(thread_count - 1)).map { |i| WorkerThread.new(self, index, i, interval, &block) }
       @worker_threads.map(&:spawn).map(&:join)
+    end
+
+    def total_thread_count
+      thread_count * worker_count
     end
 
     def synchronize
@@ -185,8 +192,14 @@ module Resque
       end
     end
 
-    def reserve
-      queues.each do |queue|
+    def reserve(thread_index = 0, total_threads = total_thread_count)
+      index_offset = 0
+      queues.each do |queue_config|
+        queue, max_threads = queue_config.split(":")
+        max_threads = max_threads.to_i
+        offset_thread_index = (thread_index - index_offset) % total_threads
+        index_offset += max_threads
+        next if max_threads > 0 and offset_thread_index >= max_threads
         log_with_severity :debug, "Checking #{queue}"
         if job = Resque.reserve(queue)
           log_with_severity :debug, "Found job on #{queue}"

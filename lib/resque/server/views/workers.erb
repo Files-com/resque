@@ -59,7 +59,7 @@
       <td><%= worker.worker_count %></td>
       <td><%= worker.thread_count %></td>
       <td><%= worker.jobs_per_fork %></td>
-      <td class='queues'><%= worker.queues.map { |q| '<a class="queue-tag" href="' + u("/queues/#{q}") + '">' + q + '</a>'}.join('') %></td>
+      <td class='queues'><%= worker.queues.map { |q| '<a class="queue-tag" href="' + u("/queues/#{q.split(":").first}") + '">' + q + '</a>'}.join('') %></td>
     </tr>
     <% end %>
     <% if workers.empty? %>

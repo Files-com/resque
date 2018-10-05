@@ -131,7 +131,7 @@ module Resque
           @children.each do |child|
             if Process.waitpid(child, Process::WNOHANG)
               @children.delete(child)
-              fork_worker_process(interval, &block) unless will_shutdown
+              fork_worker_process(interval, index, &block) unless will_shutdown
             end
           end
 

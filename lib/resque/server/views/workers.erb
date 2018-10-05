@@ -18,7 +18,7 @@
       <td><%= worker.pid %></td>
       <td><span class="time"><%= worker.started %></span></td>
       <td><span class="time"><%= worker.heartbeat %></span></td>
-      <td class='queues'><%= worker.queues.map { |q| '<a class="queue-tag" href="' + u("/queues/#{q}") + '">' + q + '</a>'}.join('') %></td>
+      <td class='queues'><%= worker.queues.map { |q| '<a class="queue-tag" href="' + u("/queues/#{q.split(":").first}") + '">' + q + '</a>'}.join('') %></td>
       <td><%= worker.processed %></td>
       <td><%= worker.failed %></td>
     </tr>

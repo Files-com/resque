@@ -122,15 +122,15 @@ module Resque
       if !!ENV['DONT_FORK']
         worker_process(interval, 0, &block)
       else
-        @children = []
+        @children = {}
         (0..(worker_count - 1)).map { |index| fork_worker_process(interval, index, &block) }
 
         loop do
           will_shutdown = interval.zero? || shutdown?
 
-          @children.each do |child|
+          @children.each do |index,child|
             if Process.waitpid(child, Process::WNOHANG)
-              @children.delete(child)
+              @children[index] = nil
               fork_worker_process(interval, index, &block) unless will_shutdown
             end
           end
@@ -148,12 +148,12 @@ module Resque
     end
 
     def fork_worker_process(interval, index, &block)
-      @children << fork {
+      @children[index] = fork {
         worker_process(interval, index, &block)
         exit!
       }
       srand # Reseed after fork
-      procline "Master Process - Worker Children PIDs: #{@children.join(",")} - Last Fork at #{Time.now.to_i}"
+      procline "Master Process - Worker Children PIDs: #{@children.values.join(",")} - Last Fork at #{Time.now.to_i}"
     end
 
     def worker_process(interval, index, &block)
@@ -243,7 +243,7 @@ module Resque
 
     def send_child_signal(signal)
       if @children
-        @children.each do |child|
+        @children.values.each do |child|
           Process.kill(signal, child) rescue nil
         end
       end

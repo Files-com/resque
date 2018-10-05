@@ -199,7 +199,7 @@ module Resque
         max_threads = max_threads.to_i
         offset_thread_index = (thread_index - index_offset) % total_threads
         index_offset += max_threads
-        next if max_threads > 0 and offset_thread_index >= max_threads
+        #next if max_threads > 0 and offset_thread_index >= max_threads
         log_with_severity :debug, "Checking #{queue}"
         if job = Resque.reserve(queue)
           log_with_severity :debug, "Found job on #{queue}"

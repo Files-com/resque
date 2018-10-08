@@ -589,7 +589,7 @@ describe "Resque::Worker" do
     without_forking do
       # inject fake worker
       other_worker = Resque::Worker.new(:other_jobs)
-      other_worker.pid = 123456
+      other_worker.instance_variable_set(:@master_pid, 123456)
       other_worker.register_worker
 
       begin
@@ -713,10 +713,6 @@ describe "Resque::Worker" do
     assert_equal custom_logger, Resque.logger
     assert_equal Logger::FATAL, Resque.logger.level
     assert_equal custom_formatter, Resque.logger.formatter
-  end
-
-  it "returns PID of running process" do
-    assert_equal @worker.to_s.split(":")[1].to_i, @worker.pid
   end
 
   it "requeue failed queue" do

@@ -58,7 +58,7 @@ describe "Resque::Worker" do
 
   it "kills workers via the remote kill mechanism" do
     worker_pid, _child_pid = start_worker
-    thread = Resque::WorkerManager.find_thread("#{hostname}:#{worker_pid}:long_running_job:0")
+    thread = Resque::WorkerManager.threads_working.first
     thread.kill
     sleep 3
 

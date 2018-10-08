@@ -308,7 +308,7 @@ module Resque
       end
 
       def redis_key_for_worker_kill(worker)
-        "#{redis_key_for_worker(worker)}:kills"
+        "#{redis_key_for_worker(worker)}:#{worker.worker_pid}:kills"
       end
 
       def redis_key_for_worker_thread(worker_thread)

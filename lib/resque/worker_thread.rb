@@ -14,7 +14,7 @@ module Resque
     end
 
     def to_s
-      "#{worker}:#{@id}"
+      "#{worker}:#{worker.worker_pid}:#{@id}"
     end
 
     def data_store

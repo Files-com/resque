@@ -24,8 +24,8 @@ module Resque
     include WorkerStatMethods
 
     attr_accessor :term_timeout, :jobs_per_fork, :worker_count, :thread_count
-    attr_reader :jobs_processed
-    attr_writer :hostname, :to_s, :pid
+    attr_reader :jobs_processed, :worker_pid
+    attr_writer :hostname, :to_s
 
     @@all_heartbeat_threads = []
     def self.kill_all_heartbeat_threads
@@ -149,7 +149,6 @@ module Resque
 
     def fork_worker_process(interval, index, &block)
       @children[index] = fork {
-        ActiveRecord::Base.clear_all_connections! if defined?(ActiveRecord::Base)
         worker_process(interval, index, &block)
         exit!
       }
@@ -160,6 +159,7 @@ module Resque
     def worker_process(interval, index, &block)
       @mutex = Mutex.new
       @jobs_processed = 0
+      @worker_pid = Process.pid
       start_kill_watcher_thread
       @worker_threads = (0..(thread_count - 1)).map { |i| WorkerThread.new(self, index, i, interval, &block) }
       @worker_threads.map(&:spawn).map(&:join)
@@ -386,7 +386,7 @@ module Resque
     end
 
     def to_s
-      @to_s ||= "#{hostname}:#{pid}:#{@queues.join(',').gsub(":", "~")}:#{worker_count}:#{thread_count}:#{jobs_per_fork}"
+      @to_s ||= "#{hostname}:#{master_pid}:#{@queues.join(',').gsub(":", "~")}:#{worker_count}:#{thread_count}:#{jobs_per_fork}"
     end
     alias_method :id, :to_s
 
@@ -394,9 +394,9 @@ module Resque
       @hostname ||= Socket.gethostname
     end
 
-    # Returns Integer PID of running worker
-    def pid
-      @pid ||= Process.pid
+    # Returns Integer PID of master worker
+    def master_pid
+      @master_pid ||= Process.pid
     end
 
     def procline(string)

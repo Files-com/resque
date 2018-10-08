@@ -241,6 +241,10 @@ module Resque
       end
 
       def unregister_worker(worker, &block)
+        while id = @redis.spop(redis_key_for_worker_threads(worker))
+          @redis.del(redis_key_for_worker_thread(id))
+          @redis.del(redis_key_for_worker_thread(id).to_s.split(':')[0..-2].join(":") + ":kills")
+        end
         @redis.pipelined do
           @redis.srem(:workers, worker)
           @redis.del(redis_key_for_worker_threads(worker))

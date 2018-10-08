@@ -23,8 +23,18 @@ module Resque
         Resque.data_store
       end
 
+      def jobs_running
+        threads_working.map { |thread| [ thread, thread.job ] }
+      end
+
       def threads
         data_store.worker_threads_map([ @worker_id ]).map { |key,value|
+          value ? WorkerThreadStatus.new(key, value) : nil
+        }.compact
+      end
+
+      def threads_working
+        data_store.worker_threads_map([ self ]).map { |key,value|
           value ? WorkerThreadStatus.new(key, value) : nil
         }.compact
       end

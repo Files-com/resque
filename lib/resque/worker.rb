@@ -149,6 +149,7 @@ module Resque
 
     def fork_worker_process(interval, index, &block)
       @children[index] = fork {
+        ActiveRecord::Base.clear_all_connections! if defined?(ActiveRecord::Base)
         worker_process(interval, index, &block)
         exit!
       }

@@ -148,6 +148,7 @@ module Resque
 
     def fork_worker_process(interval, index, &block)
       @children[index] = fork {
+        @children = []
         worker_process(interval, index, &block)
         exit!
       }

@@ -214,9 +214,9 @@ module Resque
           @redis.smembers(key)
         }.flatten.compact.map { |id| redis_key_for_worker_thread(id) }
         if thread_redis_keys.any?
-          @redis.mapped_mget(*thread_redis_keys)
+          thread_redis_keys.zip(@redis.mget(*thread_redis_keys) || []).to_h
         else
-          []
+          {}
         end
       end
 

@@ -153,7 +153,7 @@ describe "Resque::WorkerManager" do
   describe ".worker_id_from_thread_id" do
     it "works" do
       worker_id = "#{`hostname`.chomp}:#{$$}:jobs:1:1:100"
-      assert_equal Resque::WorkerManager.worker_id_from_thread_id("#{worker_id}:1"), worker_id
+      assert_equal Resque::WorkerManager.worker_id_from_thread_id("#{worker_id}:1:1"), worker_id
     end
   end
 end

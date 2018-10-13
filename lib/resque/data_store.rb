@@ -301,6 +301,7 @@ module Resque
       def worker_thread_done_working(worker_thread, &block)
         @redis.pipelined do
           @redis.del(redis_key_for_worker_thread(worker_thread))
+          @redis.srem(redis_key_for_worker_threads(worker_thread.worker), worker_thread)
           block.call
         end
       end

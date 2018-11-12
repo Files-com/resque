@@ -49,7 +49,6 @@ module Resque
       @before_first_fork_hook_ran = false
 
       @heartbeat_thread = nil
-      @heartbeat_thread_signal = nil
 
       @worker_threads = []
 
@@ -274,15 +273,12 @@ module Resque
     def start_heartbeat
       remove_heartbeat
 
-      @heartbeat_thread_signal = Resque::ThreadSignal.new
-
       @heartbeat_thread = Thread.new do
         loop do
           heartbeat!
           data_store.check_for_kill_signals(self)
           WorkerManager.prune_dead_workers if rand(1000) == 1
-          signaled = @heartbeat_thread_signal.wait_for_signal(Resque.heartbeat_interval)
-          break if signaled
+          sleep Resque.heartbeat_interval
         end
       end
     end
@@ -305,13 +301,6 @@ module Resque
       data_store.register_worker(self)
     end
 
-    def kill_background_threads
-      if @heartbeat_thread_signal
-        @heartbeat_thread_signal.signal
-        @heartbeat_thread.join
-      end
-    end
-
     def unregister_worker(exception = nil)
       @worker_threads.each do |thread|
         if job = thread.job
@@ -323,7 +312,7 @@ module Resque
         end
       end
 
-      kill_background_threads
+      @heartbeat_thread&.kill
 
       data_store.unregister_worker(self) do
         Stat.clear("processed:#{self}")

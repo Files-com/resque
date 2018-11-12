@@ -102,6 +102,11 @@ module Resque
       }
     end
 
+    def self.abandoned_heartbeats
+      worker_ids = data_store.worker_ids
+      all_heartbeats.keys.select { |key| !worker_ids.include?(key) }.map { |id| WorkerStatus.new(id) }.compact
+    end
+
     def self.data_store
       Resque.data_store
     end
@@ -132,7 +137,7 @@ module Resque
 
     def self.prune_dead_workers
       return unless data_store.acquire_pruning_dead_worker_lock(self, Resque.heartbeat_interval)
-      all_workers_with_expired_heartbeats.each do |worker|
+      (all_workers_with_expired_heartbeats + abandoned_heartbeats).each do |worker|
         Logging.log :info, "Pruning dead worker: #{worker}"
         worker.unregister_worker(PruneDeadWorkerDirtyExit.new(worker.to_s))
       end

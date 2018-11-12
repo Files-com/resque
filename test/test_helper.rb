@@ -55,11 +55,6 @@ class GlobalSpecHooks < MiniTest::Spec
     end
   end
 
-  def teardown
-    super
-    Resque::Worker.kill_all_heartbeat_threads
-  end
-
   register_spec_type(/.*/, self)
 end
 

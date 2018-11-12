@@ -27,12 +27,6 @@ module Resque
     attr_reader :jobs_processed, :worker_pid
     attr_writer :hostname, :to_s
 
-    @@all_heartbeat_threads = []
-    def self.kill_all_heartbeat_threads
-      @@all_heartbeat_threads.each(&:kill).each(&:join)
-      @@all_heartbeat_threads = []
-    end
-
     def data_store
       Resque.redis
     end
@@ -56,8 +50,6 @@ module Resque
 
       @heartbeat_thread = nil
       @heartbeat_thread_signal = nil
-      @kill_watcher_thread = nil
-      @kill_watcher_thread_signal = nil
 
       @worker_threads = []
 
@@ -161,9 +153,12 @@ module Resque
       @mutex = Mutex.new
       @jobs_processed = 0
       @worker_pid = Process.pid
-      start_kill_watcher_thread
       @worker_threads = (0..(thread_count - 1)).map { |i| WorkerThread.new(self, index, i, interval, &block) }
-      @worker_threads.map(&:spawn).map(&:join)
+      if @worker_threads.size == 1
+        @worker_threads.first.work
+      else
+        @worker_threads.map(&:spawn).map(&:join)
+      end
     end
 
     def total_thread_count
@@ -284,27 +279,12 @@ module Resque
       @heartbeat_thread = Thread.new do
         loop do
           heartbeat!
+          data_store.check_for_kill_signals(self)
           WorkerManager.prune_dead_workers if rand(1000) == 1
           signaled = @heartbeat_thread_signal.wait_for_signal(Resque.heartbeat_interval)
           break if signaled
         end
       end
-
-      @@all_heartbeat_threads << @heartbeat_thread
-    end
-
-    def start_kill_watcher_thread
-      @kill_watcher_thread_signal = Resque::ThreadSignal.new
-
-      @kill_watcher_thread = Thread.new do
-        loop do
-          data_store.check_for_kill_signals(self)
-          signaled = @kill_watcher_thread_signal.wait_for_signal(Resque.heartbeat_interval)
-          break if signaled
-        end
-      end
-
-      @@all_heartbeat_threads << @kill_watcher_thread
     end
 
     def paused?
@@ -329,10 +309,6 @@ module Resque
       if @heartbeat_thread_signal
         @heartbeat_thread_signal.signal
         @heartbeat_thread.join
-      end
-      if @kill_watcher_thread
-        @kill_watcher_thread_signal.signal
-        @kill_watcher_thread.join
       end
     end
 

@@ -149,6 +149,8 @@ module Resque
     end
 
     def worker_process(interval, index, &block)
+      start_heartbeat
+
       @mutex = Mutex.new
       @jobs_processed = 0
       @worker_pid = Process.pid
@@ -214,7 +216,6 @@ module Resque
       $0 = "resque: Starting"
 
       register_signal_handlers
-      start_heartbeat
       WorkerManager.prune_dead_workers
       register_worker
 

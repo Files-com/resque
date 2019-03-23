@@ -63,6 +63,7 @@ module Resque
 
       worker.set_procline
       set_payload
+      worker.report_to_statsd(payload_class_name)
 
       log_with_severity :info, "got: #{@job.inspect}"
       @job.worker = worker

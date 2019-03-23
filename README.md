@@ -62,6 +62,15 @@ cores on the machine, a thread count of 4-16, and a `JOBS_PER_FORK`
 of about 100-1000.
 
 
+### Statsd Reporting
+
+This fork can report jobs to Statsd when processed.  Just set the
+following ENVs:
+
+* `STATSD_HOST` - statsd server hostname
+* `STATSD_PORT` - statsd server port
+* `STATSD_KEY` - key prefix for statsd counters (job name will be appended)
+
 ## Signals
 
 Because workers now run multiple jobs at once, the signal responses have

@@ -23,7 +23,7 @@ module Resque
     include Resque::Logging
     include WorkerStatMethods
 
-    attr_accessor :term_timeout, :jobs_per_fork, :worker_count, :thread_count
+    attr_accessor :term_timeout, :jobs_per_fork, :worker_count, :thread_count, :statsd, :statsd_key
     attr_reader :jobs_processed, :worker_pid
     attr_writer :hostname, :to_s
 
@@ -59,6 +59,11 @@ module Resque
       self.jobs_per_fork = [ (ENV['JOBS_PER_FORK'] || 1).to_i, 1 ].max
       self.worker_count = [ (ENV['WORKER_COUNT'] || 1).to_i, 1 ].max
       self.thread_count = [ (ENV['THREAD_COUNT'] || 1).to_i, 1 ].max
+
+      if ENV['STATSD_KEY'] and ENV['STATSD_HOST'] and ENV['STATSD_PORT']
+        self.statsd = Statsd.new(ENV['STATSD_HOST'], ENV['STATSD_PORT'])
+        self.statsd_key = ENV['STATSD_KEY']
+      end
 
       self.queues = queues
     end
@@ -179,6 +184,10 @@ module Resque
           shutdown
         end
       end
+    end
+
+    def report_to_statsd(job_name)
+      statsd&.increment("#{statsd_key}.#{job_name}", 1)
     end
 
     def set_procline

@@ -46,6 +46,7 @@ module Resque
     def initialize(*queues)
       @shutdown = nil
       @paused = nil
+      @consul_disabled = false
       @before_first_fork_hook_ran = false
 
       @heartbeat_thread = nil
@@ -286,6 +287,7 @@ module Resque
       @heartbeat_thread = Thread.new do
         loop do
           heartbeat!
+          update_consul_disabled
           data_store.check_for_kill_signals(self)
           WorkerManager.prune_dead_workers if rand(1000) == 1
           sleep Resque.heartbeat_interval
@@ -293,8 +295,12 @@ module Resque
       end
     end
 
+    def update_consul_disabled
+      @consul_disabled = (File.exists?("/etc/consul_disabled") or File.exists?("/tmp/consul_disabled"))
+    end
+
     def paused?
-      @paused
+      @paused or @consul_disabled
     end
 
     def pause_processing

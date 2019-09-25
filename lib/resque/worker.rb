@@ -52,7 +52,6 @@ module Resque
       @heartbeat_thread = nil
 
       @worker_threads = []
-
       verbose_value = ENV['LOGGING'] || ENV['VERBOSE']
       self.verbose = verbose_value if verbose_value
       self.very_verbose = ENV['VVERBOSE'] if ENV['VVERBOSE']
@@ -67,6 +66,7 @@ module Resque
       end
 
       self.queues = queues
+      log_with_severity :debug, "Worker initialized"
     end
 
     def prepare

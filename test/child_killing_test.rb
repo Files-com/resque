@@ -8,7 +8,7 @@ describe "Resque::Worker" do
 
     def self.perform
       Resque.redis.rpush('long-test:start', Process.pid)
-      sleep 5
+      sleep 1
       Resque.redis.rpush('long-test:result', 'Finished Normally')
     ensure
       Resque.redis.rpush('long-test:ensure_block_executed', 'exiting.')
@@ -43,6 +43,10 @@ describe "Resque::Worker" do
     assert (`ps -p #{child_pid.to_s} -o pid=`).empty?
   end
 
+  before do
+    Resque.heartbeat_interval = 0.1 # make interval nice and fast for tests
+  end
+
   it "kills off the child when killed" do
     worker_pid, child_pid = start_worker
     assert worker_pid != child_pid
@@ -60,7 +64,7 @@ describe "Resque::Worker" do
     _worker_pid, _child_pid = start_worker
     thread = Resque::WorkerManager.threads_working.first
     thread.kill
-    sleep 3
+    sleep 0.5
 
     result = Resque.redis.lpop('long-test:result')
     assert_nil result

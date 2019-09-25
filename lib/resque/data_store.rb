@@ -274,7 +274,7 @@ module Resque
       end
 
       def acquire_pruning_dead_worker_lock(worker, expiry)
-        @redis.set(redis_key_for_worker_pruning, worker.to_s, :ex => expiry, :nx => true)
+        @redis.set(redis_key_for_worker_pruning, worker.to_s, :ex => expiry.ceil, :nx => true)
       end
 
       def check_for_kill_signals(worker)

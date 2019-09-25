@@ -39,19 +39,19 @@ describe "rake tasks" do
       it "triggers DEBUG level logging when VVERBOSE is set to 1" do
         ENV['VVERBOSE'] = '1'
         ENV['QUEUES'] = 'jobs'
-        ENV['JOBS_PER_FORK'] = "0"
+        Resque::Worker.any_instance.expects(:work)
         run_rake_task("resque:work")
         assert_includes messages.string, 'Starting worker' # Include an info level statement
-        assert_includes messages.string, 'Registered signals' # Includes a debug level statement
+        assert_includes messages.string, 'Worker initialized' # Includes a debug level statement
       end
 
       it "triggers INFO level logging when VERBOSE is set to 1" do
         ENV['VERBOSE'] = '1'
         ENV['QUEUES'] = 'jobs'
-        ENV['JOBS_PER_FORK'] = "0"
+        Resque::Worker.any_instance.expects(:work)
         run_rake_task("resque:work")
         assert_includes messages.string, 'Starting worker' # Include an info level statement
-        refute_includes messages.string, 'Registered signals' # Does not a debug level statement
+        refute_includes messages.string, 'Worker initialized' # Does not a debug level statement
       end
     end
 

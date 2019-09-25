@@ -127,9 +127,13 @@ module Resque
         loop do
           children = @children
           children.each do |index,child|
-            if Process.waitpid(child, Process::WNOHANG)
-              @children[index] = nil
-              fork_worker_process(OpenStruct.new(index: index, interval: interval), &block) unless interval.zero? || shutdown?
+            if child
+              if Process.waitpid(child, Process::WNOHANG)
+                @children[index] = nil
+                fork_worker_process(OpenStruct.new(index: index, interval: interval), &block) unless interval.zero? || shutdown?
+              end
+            elsif shutdown?
+              @children.delete(index)
             end
           end
 
@@ -141,7 +145,7 @@ module Resque
       unregister_worker
     rescue Exception => exception
       return if exception.class == SystemExit && !@children
-      log_with_severity :error, "Worker Error: #{exception.inspect}"
+      log_with_severity :error, "Worker Error: #{exception.inspect} #{exception.backtrace}"
       unregister_worker(exception)
     end
 

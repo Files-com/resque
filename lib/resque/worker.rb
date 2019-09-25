@@ -117,17 +117,19 @@ module Resque
       startup
 
       if !!ENV['DONT_FORK']
-        worker_process(interval, 0, &block)
+        worker_process(OpenStruct.new(interval: interval, index: 0), &block)
       else
         @children = {}
-        (0..(worker_count - 1)).map { |index| fork_worker_process(interval, index, &block) }
+        (0..(worker_count - 1)).map { |index|
+          fork_worker_process(OpenStruct.new(index: index, interval: interval), &block)
+        }
 
         loop do
           children = @children
           children.each do |index,child|
             if Process.waitpid(child, Process::WNOHANG)
               @children[index] = nil
-              fork_worker_process(interval, index, &block) unless interval.zero? || shutdown?
+              fork_worker_process(OpenStruct.new(index: index, interval: interval), &block) unless interval.zero? || shutdown?
             end
           end
 
@@ -143,24 +145,27 @@ module Resque
       unregister_worker(exception)
     end
 
-    def fork_worker_process(interval, index, &block)
-      @children[index] = fork {
+    def fork_worker_process(process, &block)
+      process.object_id = "worker-#{process.index}" # object_id exists as a kludge so NewRelic knows how to set up the Pipe channel to the parent process.  It expects a Job, instead we pass it a WorkerProcess.
+      run_hook :before_fork, process
+      @children[process.index] = fork {
         @children = {}
         ActiveRecord::Base.clear_all_connections! if defined?(ActiveRecord::Base)
-        worker_process(interval, index, &block)
+        worker_process(process, &block)
+        run_hook :after_fork, process
         exit!
       }
       srand # Reseed after fork
       procline "Master Process - Worker Children PIDs: #{@children.values.join(",")} - Last Fork at #{Time.now.to_i}"
     end
 
-    def worker_process(interval, index, &block)
+    def worker_process(process, &block)
       start_heartbeat
 
       @mutex = Mutex.new
       @jobs_processed = 0
       @worker_pid = Process.pid
-      @worker_threads = (0..(thread_count - 1)).map { |i| WorkerThread.new(self, index, i, interval, &block) }
+      @worker_threads = (0..(thread_count - 1)).map { |i| WorkerThread.new(self, process.index, i, process.interval, &block) }
       if @worker_threads.size == 1
         @worker_threads.first.work
       else
@@ -227,6 +232,7 @@ module Resque
 
       register_signal_handlers
       WorkerManager.prune_dead_workers
+      run_hook :before_first_fork
       register_worker
 
       $stdout.sync = true
@@ -305,12 +311,14 @@ module Resque
 
     def pause_processing
       log_with_severity :info, "USR2 received; pausing job processing"
+      run_hook :before_pause, self
       @paused = true
     end
 
     def unpause_processing
       log_with_severity :info, "CONT received; resuming job processing"
       @paused = false
+      run_hook :after_pause, self
     end
 
     def register_worker
@@ -423,6 +431,20 @@ module Resque
 
     def log_with_severity(severity, message)
       Logging.log(severity, message)
+    end
+
+    def run_hook(name, *args)
+      hooks = Resque.send(name)
+      return if hooks.empty?
+      return if name == :before_first_fork && @before_first_fork_hook_ran
+      msg = "Running #{name} hooks"
+      msg << " with #{args.inspect}" if args.any?
+      log_with_severity :info, msg
+
+      hooks.each do |hook|
+        args.any? ? hook.call(*args) : hook.call
+        @before_first_fork_hook_ran = true if name == :before_first_fork
+      end
     end
   end
 end

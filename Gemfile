@@ -4,6 +4,7 @@ gemspec
 
 gem 'connection_pool'
 gem 'json'
+gem 'm'
 gem 'minitest', '4.7.0'
 gem 'mocha', require: false
 gem 'pry'

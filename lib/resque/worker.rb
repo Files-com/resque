@@ -120,6 +120,7 @@ module Resque
         worker_process(OpenStruct.new(interval: interval, index: 0), &block)
       else
         @children = {}
+        log_with_severity :debug, "Launching #{worker_count} worker(s)."
         (0..(worker_count - 1)).map { |index|
           fork_worker_process(OpenStruct.new(index: index, interval: interval), &block)
         }
@@ -133,6 +134,7 @@ module Resque
                 fork_worker_process(OpenStruct.new(index: index, interval: interval), &block) unless interval.zero? || shutdown?
               end
             elsif shutdown?
+              log_with_severity :debug, "Deleting Worker index #{index} for shutdown."
               @children.delete(index)
             end
           end
@@ -150,10 +152,12 @@ module Resque
     end
 
     def fork_worker_process(process, &block)
+      log_with_severity :debug, "Forking worker process index #{process.index}."
       run_hook :before_fork, process
       @children[process.index] = fork {
         @children = {}
         ActiveRecord::Base.clear_all_connections! if defined?(ActiveRecord::Base)
+        log_with_severity :debug, "Successfully forked worker process index #{process.index}."
         run_hook :after_fork, process
         worker_process(process, &block)
         exit!
@@ -168,6 +172,7 @@ module Resque
       @mutex = Mutex.new
       @jobs_processed = 0
       @worker_pid = Process.pid
+      log_with_severity :debug, "Spawning #{thread_count} threads for worker process index #{process.index}."
       @worker_threads = (0..(thread_count - 1)).map { |i| WorkerThread.new(self, process.index, i, process.interval, &block) }
       if @worker_threads.size == 1
         @worker_threads.first.work
@@ -445,7 +450,11 @@ module Resque
       log_with_severity :info, msg
 
       hooks.each do |hook|
-        args.any? ? hook.call(*args) : hook.call
+        begin
+          args.any? ? hook.call(*args) : hook.call
+        rescue StandardError => e
+          log_with_severity :error, "Error running hook #{name}: #{e.message} #{e.backtrace}"
+        end
         @before_first_fork_hook_ran = true if name == :before_first_fork
       end
     end

@@ -155,8 +155,8 @@ module Resque
       @children[process.index] = fork {
         @children = {}
         ActiveRecord::Base.clear_all_connections! if defined?(ActiveRecord::Base)
-        worker_process(process, &block)
         run_hook :after_fork, process
+        worker_process(process, &block)
         exit!
       }
       srand # Reseed after fork

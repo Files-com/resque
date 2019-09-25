@@ -150,7 +150,6 @@ module Resque
     end
 
     def fork_worker_process(process, &block)
-      process.object_id = "worker-#{process.index}" # object_id exists as a kludge so NewRelic knows how to set up the Pipe channel to the parent process.  It expects a Job, instead we pass it a WorkerProcess.
       run_hook :before_fork, process
       @children[process.index] = fork {
         @children = {}

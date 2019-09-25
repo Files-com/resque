@@ -457,45 +457,10 @@ describe "Resque::Worker" do
     assert_equal [], Resque.workers
   end
 
-  it "removes worker with stringified id" do
-    without_forking do
-      @worker.extend(AssertInWorkBlock).work(0) do
-        worker_id = Resque.workers[0].to_s
-        Resque.remove_worker(worker_id)
-        assert_equal [], Resque.workers
-      end
-    end
-  end
-
-  it "records what it is working on" do
-    without_forking do
-      @worker.extend(AssertInWorkBlock).work(0) do
-        task = @worker.job
-        assert_equal({"args"=>[20, "/tmp"], "class"=>"SomeJob", "generation" => 1, "id" => task['payload']['id']}, task['payload'])
-        assert task['run_at']
-        assert_equal 'jobs', task['queue']
-      end
-    end
-  end
-
   it "knows who is working" do
     without_forking do
       @worker.extend(AssertInWorkBlock).work(0) do
         assert_equal [@worker], Resque.working
-      end
-    end
-  end
-
-  it "caches the current job iff reloading is disabled" do
-    without_forking do
-      @worker.extend(AssertInWorkBlock).work(0) do
-        first_instance = @worker.job
-        second_instance = @worker.job
-        refute_equal first_instance.object_id, second_instance.object_id
-
-        first_instance = @worker.job(false)
-        second_instance = @worker.job(false)
-        assert_equal first_instance.object_id, second_instance.object_id
       end
     end
   end
@@ -535,94 +500,12 @@ describe "Resque::Worker" do
     end
   end
 
-  it "knows whether it exists or not" do
-    without_forking do
-      @worker.extend(AssertInWorkBlock).work(0) do
-        assert Resque::Worker.exists?(@worker)
-        assert !Resque::Worker.exists?('blah-blah')
-      end
-    end
-  end
-
-  it "knows what host it's running on" do
-    without_forking do
-      blah_worker = nil
-      Socket.stub :gethostname, 'blah-blah' do
-        blah_worker = Resque::Worker.new(:jobs)
-        blah_worker.register_worker
-      end
-
-      @worker.extend(AssertInWorkBlock).work(0) do
-        assert Resque::Worker.exists?(blah_worker)
-        assert_equal Resque::Worker.find(blah_worker).hostname, 'blah-blah'
-      end
-    end
-  end
-
   it "sets $0 while working" do
     without_forking do
       @worker.extend(AssertInWorkBlock).work(0) do
         prefix = ENV['RESQUE_PROCLINE_PREFIX']
         ver = Resque::Version
-        assert_equal "#{prefix}resque-#{ver}: Processing jobs since #{Time.now.to_i} [SomeJob]", $0
-      end
-    end
-  end
-
-  it "can be found" do
-    without_forking do
-      @worker.extend(AssertInWorkBlock).work(0) do
-        found = Resque::Worker.find(@worker.to_s)
-
-        # we ensure that the found ivar @pid is set to the correct value since
-        # Resque::Worker#pid will use it instead of Process.pid if present
-        assert_equal @worker.pid, found.instance_variable_get(:@pid)
-
-        assert_equal @worker.to_s, found.to_s
-        assert found.working?
-        assert_equal @worker.job, found.job
-      end
-    end
-  end
-
-  it 'can find others' do
-    without_forking do
-      # inject fake worker
-      other_worker = Resque::Worker.new(:other_jobs)
-      other_worker.instance_variable_set(:@master_pid, 123456)
-      other_worker.register_worker
-
-      begin
-        @worker.extend(AssertInWorkBlock).work(0) do
-          found = Resque::Worker.find(other_worker.to_s)
-          assert_equal other_worker.to_s, found.to_s
-          assert_equal other_worker.pid, found.pid
-          assert !found.working?
-          assert found.job.empty?
-        end
-      ensure
-        other_worker.unregister_worker
-      end
-    end
-  end
-
-  it "doesn't find fakes" do
-    without_forking do
-      @worker.extend(AssertInWorkBlock).work(0) do
-        found = Resque::Worker.find('blah-blah')
-        assert_equal nil, found
-      end
-    end
-  end
-
-  it "doesn't write PID file when finding" do
-    with_pidfile do
-      File.expects(:open).never
-
-      without_forking do
-        @worker.work(0) do
-          Resque::Worker.find(@worker.to_s)
-        end
+        assert_equal "#{prefix}resque-#{ver}: Processing Job(s): SomeJob", $0
       end
     end
   end

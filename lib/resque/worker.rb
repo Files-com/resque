@@ -296,7 +296,7 @@ module Resque
     end
 
     def update_consul_disabled
-      @consul_disabled = (File.exists?("/etc/consul_disabled") or File.exists?("/tmp/consul_disabled"))
+      @consul_disabled = (File.exist?("/etc/consul_disabled") or File.exist?("/tmp/consul_disabled"))
     end
 
     def paused?

@@ -201,7 +201,7 @@ module Resque
   end
 
   # The `before_fork` hook will be run in the **parent** process
-  # before every job, so be careful- any changes you make will be
+  # before every fork, so be careful- any changes you make will be
   # permanent for the lifespan of the worker.
   #
   # Call with a block to register a hook.
@@ -216,8 +216,7 @@ module Resque
   end
 
   # The `after_fork` hook will be run in the child process and is passed
-  # the current job. Any changes you make, therefore, will only live as
-  # long as the job currently being processed.
+  # the current worker process info.
   #
   # Call with a block to register a hook.
   # Call with no arguments to return all registered hooks.
@@ -228,6 +227,19 @@ module Resque
   # Register an after_fork proc.
   def after_fork=(block)
     register_hook(:after_fork, block)
+  end
+
+  # The `after_jobs_run` hook will be run in the child process after
+  # all jobs have been run.
+  # Call with a block to register a hook.
+  # Call with no arguments to return all registered hooks.
+  def after_jobs_run(&block)
+    block ? register_hook(:after_jobs_run, block) : hooks(:after_jobs_run)
+  end
+
+  # Register an after_jobs_run proc.
+  def after_jobs_run=(block)
+    register_hook(:after_jobs_run, block)
   end
 
   # The `before_pause` hook will be run in the parent process before the

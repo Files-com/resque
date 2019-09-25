@@ -179,6 +179,7 @@ module Resque
       else
         @worker_threads.map(&:spawn).map(&:join)
       end
+      run_hook :after_jobs_run, process
     end
 
     def total_thread_count

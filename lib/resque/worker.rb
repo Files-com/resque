@@ -218,7 +218,11 @@ module Resque
       index_offset = 0
       queues.each do |queue_config|
         queue, max_threads = queue_config.split(":")
-        max_threads = max_threads.to_i
+        if max_threads =~ /[0-9]+\%/
+          max_threads = total_threads * max_threads.to_i / 100
+        else
+          max_threads = max_threads.to_i
+        end
         offset_thread_index = (thread_index - index_offset) % total_threads
         index_offset += max_threads
         next if max_threads > 0 and offset_thread_index >= max_threads

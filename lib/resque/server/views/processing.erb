@@ -1,3 +1,3 @@
 <%= partial :job_class, :job => job['payload'] %>
 <small><span class="queue time"><%= job['run_at'] %></span></small>
-<span class='kill'><a href="<%= u "/kill/#{CGI.escape(thread)}" %>" rel="kill">Kill</a></span>
+<span class='kill'><a href="<%= u "/kill/#{CGI.escape(thread.to_s)}" %>" rel="kill">Kill</a></span>

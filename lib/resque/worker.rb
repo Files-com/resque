@@ -203,6 +203,8 @@ module Resque
 
     def report_to_statsd(job_name)
       statsd&.increment("#{statsd_key}.#{job_name}", 1)
+    rescue SocketError
+      log_with_severity :error, "Unable to report to statsd: #{stated_key}.#{job_name}"
     end
 
     def set_procline

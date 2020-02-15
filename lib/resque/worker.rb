@@ -258,7 +258,7 @@ module Resque
       trap('INT')  { shutdown; send_child_signal('INT'); kill_worker_threads }
 
       begin
-        trap('QUIT') { shutdown; send_child_signal('QUIT') }
+        trap('QUIT') { shutdown; send_child_signal('QUIT'); worker_thread_kill_timer }
         trap('USR1') { send_child_signal('USR1'); unpause_processing; kill_worker_threads }
         trap('USR2') { pause_processing; send_child_signal('USR2') }
         trap('CONT') { unpause_processing; send_child_signal('CONT') }
@@ -283,6 +283,13 @@ module Resque
 
     def kill_worker_threads
       @worker_threads.each(&:kill)
+    end
+
+    def worker_thread_kill_timer(sleep_time = 50)
+      Thread.new {
+        sleep(sleep_time)
+        kill_worker_threads
+      }
     end
 
     def shutdown

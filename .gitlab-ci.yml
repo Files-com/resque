@@ -1,0 +1,26 @@
+default:
+  image: "docker.av:443/base_ci:2.1.89"
+
+cache:
+  key: unified
+  paths:
+  - vendor/bundle
+
+Build:
+  stage: build
+  script:
+  - RAILS_ENV=test bundle install --path vendor/bundle
+  - bundle exec rubocop
+  except:
+    refs:
+      - master
+
+Deploy:
+  stage: deploy
+  script:
+  - RAILS_ENV=test bundle install --path vendor/bundle
+  - bundle exec rubocop
+  - avdeploy
+  only:
+    refs:
+      - master

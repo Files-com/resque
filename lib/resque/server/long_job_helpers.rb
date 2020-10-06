@@ -3,7 +3,7 @@ Resque::Server.helpers do
     Object.const_defined?(:LongJob)
   end
 
-  def is_long_job?(args)
+  def long_job?(args)
     return false unless long_job_enabled?
     return false unless args&.size == 1
 
@@ -17,13 +17,13 @@ Resque::Server.helpers do
   end
 
   def smart_args(args)
-    return args unless is_long_job?(args)
+    return args unless long_job?(args)
 
     get_long_job(args).args
   end
 
   def long_job_site_id(args)
-    return nil unless is_long_job?(args)
+    return nil unless long_job?(args)
 
     get_long_job(args).site_id
   end

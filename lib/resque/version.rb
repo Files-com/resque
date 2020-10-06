@@ -1,3 +1,3 @@
 module Resque
-  Version = VERSION = '2.0.1581779922'
+  Version = VERSION = '2.0.1581779922'.freeze
 end

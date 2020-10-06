@@ -3,7 +3,6 @@ module Resque
     # A Failure backend that uses multiple backends
     # delegates all queries to the first backend
     class Multiple < Base
-
       class << self
         attr_accessor :classes
       end
@@ -15,7 +14,7 @@ module Resque
 
       def initialize(*args)
         super
-        @backends = self.class.classes.map {|klass| klass.new(*args)}
+        @backends = self.class.classes.map { |klass| klass.new(*args) }
       end
 
       def save
@@ -60,7 +59,7 @@ module Resque
         classes.first.requeue_all
       end
 
-      def self.remove(index, queue)
+      def self.remove(index, _queue)
         classes.each { |klass| klass.remove(index) }
       end
     end

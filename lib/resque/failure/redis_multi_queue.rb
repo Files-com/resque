@@ -3,7 +3,6 @@ module Resque
     # A Failure backend that stores exceptions in Redis. Very simple but
     # works out of the box, along with support in the Resque web app.
     class RedisMultiQueue < Base
-
       def data_store
         Resque.data_store
       end
@@ -14,16 +13,16 @@ module Resque
 
       def save
         data = {
-          :failed_at => Time.now.strftime("%Y/%m/%d %H:%M:%S %Z"),
-          :payload   => payload,
-          :exception => exception.class.to_s,
-          :error     => UTF8Util.clean(exception.to_s),
-          :backtrace => filter_backtrace(Array(exception.backtrace)),
-          :worker    => worker.to_s,
-          :queue     => queue
+          failed_at: Time.now.strftime('%Y/%m/%d %H:%M:%S %Z'),
+          payload: payload,
+          exception: exception.class.to_s,
+          error: UTF8Util.clean(exception.to_s),
+          backtrace: filter_backtrace(Array(exception.backtrace)),
+          worker: worker.to_s,
+          queue: queue
         }
         data = Resque.encode(data)
-        data_store.push_to_failed_queue(data,Resque::Failure.failure_queue_name(queue))
+        data_store.push_to_failed_queue(data, Resque::Failure.failure_queue_name(queue))
       end
 
       def self.count(queue = nil, class_name = nil)
@@ -50,7 +49,7 @@ module Resque
         data_store.failed_queue_names(:failed_queues)
       end
 
-      def self.each(offset = 0, limit = self.count, queue = :failed, class_name = nil, order = 'desc')
+      def self.each(offset = 0, limit = count, queue = :failed, class_name = nil, order = 'desc')
         items = all(offset, limit, queue)
         items = [items] unless items.is_a? Array
         reversed = false
@@ -73,13 +72,13 @@ module Resque
 
       def self.requeue(id, queue = :failed)
         item = all(id, 1, queue)
-        item['retried_at'] = Time.now.strftime("%Y/%m/%d %H:%M:%S")
-        data_store.update_item_in_failed_queue(id,Resque.encode(item),queue)
+        item['retried_at'] = Time.now.strftime('%Y/%m/%d %H:%M:%S')
+        data_store.update_item_in_failed_queue(id, Resque.encode(item), queue)
         Job.create(item['queue'], item['payload']['class'], *item['payload']['args'])
       end
 
       def self.remove(id, queue = :failed)
-        data_store.remove_from_failed_queue(id,queue)
+        data_store.remove_from_failed_queue(id, queue)
       end
 
       def self.requeue_queue(queue)

@@ -17,7 +17,7 @@ class RedisRunner
   end
 
   def self.config
-    @config ||= if File.exists?(redis_dir + 'etc/redis.conf')
+    @config ||= if File.exist?(redis_dir + 'etc/redis.conf')
                   redis_dir + 'etc/redis.conf'
                 else
                   redis_dir + '../etc/redis.conf'
@@ -30,7 +30,7 @@ class RedisRunner
 
   # Just check for existance of dtach socket
   def self.running?
-    File.exists? dtach_socket
+    File.exist? dtach_socket
   end
 
   def self.start
@@ -84,25 +84,25 @@ namespace :redis do
     in order to get an alternate location for your install files.
   DOC
 
-  task :install => [:about, :download, :make] do
+  task install: %i[about download make] do
     bin_dir = '/usr/bin'
     conf_dir = '/etc'
 
     if ENV['PREFIX']
       bin_dir = "#{ENV['PREFIX']}/bin"
-      sh "mkdir -p #{bin_dir}" unless File.exists?("#{bin_dir}")
+      sh "mkdir -p #{bin_dir}" unless File.exist?(bin_dir.to_s)
 
       conf_dir = "#{ENV['PREFIX']}/etc"
-      sh "mkdir -p #{conf_dir}" unless File.exists?("#{conf_dir}")
+      sh "mkdir -p #{conf_dir}" unless File.exist?(conf_dir.to_s)
     end
 
-    %w(redis-benchmark redis-cli redis-server).each do |bin|
+    %w[redis-benchmark redis-cli redis-server].each do |bin|
       sh "cp #{INSTALL_DIR}/src/#{bin} #{bin_dir}"
     end
 
     puts "Installed redis-benchmark, redis-cli and redis-server to #{bin_dir}"
 
-    unless File.exists?("#{conf_dir}/redis.conf")
+    unless File.exist?("#{conf_dir}/redis.conf")
       sh "cp #{INSTALL_DIR}/redis.conf #{conf_dir}/redis.conf"
       puts "Installed redis.conf to #{conf_dir} \n You should look at this file!"
     end
@@ -113,11 +113,11 @@ namespace :redis do
     sh "cd #{INSTALL_DIR}/src && make"
   end
 
-  desc "Download package"
+  desc 'Download package'
   task :download do
-    sh "rm -rf #{INSTALL_DIR}/" if File.exists?("#{INSTALL_DIR}/.svn")
-    sh "git clone git://github.com/antirez/redis.git #{INSTALL_DIR}" unless File.exists?(INSTALL_DIR)
-    sh "cd #{INSTALL_DIR} && git pull" if File.exists?("#{INSTALL_DIR}/.git")
+    sh "rm -rf #{INSTALL_DIR}/" if File.exist?("#{INSTALL_DIR}/.svn")
+    sh "git clone git://github.com/antirez/redis.git #{INSTALL_DIR}" unless File.exist?(INSTALL_DIR)
+    sh "cd #{INSTALL_DIR} && git pull" if File.exist?("#{INSTALL_DIR}/.git")
   end
 end
 
@@ -128,14 +128,12 @@ namespace :dtach do
   end
 
   desc 'Install dtach 0.8 from source'
-  task :install => [:about, :download, :make] do
-
-    bin_dir = "/usr/bin"
-
+  task install: %i[about download make] do
+    bin_dir = '/usr/bin'
 
     if ENV['PREFIX']
       bin_dir = "#{ENV['PREFIX']}/bin"
-      sh "mkdir -p #{bin_dir}" unless File.exists?("#{bin_dir}")
+      sh "mkdir -p #{bin_dir}" unless File.exist?(bin_dir.to_s)
     end
 
     sh "cp #{INSTALL_DIR}/dtach-0.8/dtach #{bin_dir}"
@@ -145,17 +143,15 @@ namespace :dtach do
     sh "cd #{INSTALL_DIR}/dtach-0.8/ && ./configure && make"
   end
 
-  desc "Download package"
+  desc 'Download package'
   task :download do
-    unless File.exists?("#{INSTALL_DIR}/dtach-0.8.tar.gz")
+    unless File.exist?("#{INSTALL_DIR}/dtach-0.8.tar.gz")
       require 'net/http'
 
       url = 'http://downloads.sourceforge.net/project/dtach/dtach/0.8/dtach-0.8.tar.gz'
-      open("#{INSTALL_DIR}/dtach-0.8.tar.gz", 'wb') do |file| file.write(open(url).read) end
+      open("#{INSTALL_DIR}/dtach-0.8.tar.gz", 'wb') { |file| file.write(open(url).read) }
     end
 
-    unless File.directory?("#{INSTALL_DIR}/dtach-0.8")
-      sh "cd #{INSTALL_DIR} && tar xzf dtach-0.8.tar.gz"
-    end
+    sh "cd #{INSTALL_DIR} && tar xzf dtach-0.8.tar.gz" unless File.directory?("#{INSTALL_DIR}/dtach-0.8")
   end
 end

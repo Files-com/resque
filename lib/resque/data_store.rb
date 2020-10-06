@@ -2,7 +2,7 @@ module Resque
   class DataStore
     extend Forwardable
 
-    HEARTBEAT_KEY = "workers:heartbeat"
+    HEARTBEAT_KEY = 'workers:heartbeat'.freeze
 
     def initialize(redis)
       @redis                = redis
@@ -13,56 +13,56 @@ module Resque
     end
 
     def_delegators :@queue_access, :push_to_queue,
-                                   :pop_from_queue,
-                                   :queue_size,
-                                   :peek_in_queue,
-                                   :queue_names,
-                                   :remove_queue,
-                                   :everything_in_queue,
-                                   :remove_from_queue,
-                                   :watch_queue,
-                                   :list_range
+                   :pop_from_queue,
+                   :queue_size,
+                   :peek_in_queue,
+                   :queue_names,
+                   :remove_queue,
+                   :everything_in_queue,
+                   :remove_from_queue,
+                   :watch_queue,
+                   :list_range
 
     def_delegators :@failed_queue_access, :add_failed_queue,
-                                          :remove_failed_queue,
-                                          :num_failed,
-                                          :failed_queue_names,
-                                          :push_to_failed_queue,
-                                          :clear_failed_queue,
-                                          :update_item_in_failed_queue,
-                                          :remove_from_failed_queue
+                   :remove_failed_queue,
+                   :num_failed,
+                   :failed_queue_names,
+                   :push_to_failed_queue,
+                   :clear_failed_queue,
+                   :update_item_in_failed_queue,
+                   :remove_from_failed_queue
     def_delegators :@workers, :worker_ids,
-                              :worker_threads_map,
-                              :get_worker_thread_payload,
-                              :worker_exists?,
-                              :register_worker,
-                              :worker_started,
-                              :unregister_worker,
-                              :kill_worker_thread,
-                              :check_for_kill_signals,
-                              :heartbeat,
-                              :heartbeat!,
-                              :remove_heartbeat,
-                              :all_heartbeats,
-                              :acquire_pruning_dead_worker_lock,
-                              :set_worker_thread_payload,
-                              :worker_start_time,
-                              :worker_thread_done_working
+                   :worker_threads_map,
+                   :get_worker_thread_payload,
+                   :worker_exists?,
+                   :register_worker,
+                   :worker_started,
+                   :unregister_worker,
+                   :kill_worker_thread,
+                   :check_for_kill_signals,
+                   :heartbeat,
+                   :heartbeat!,
+                   :remove_heartbeat,
+                   :all_heartbeats,
+                   :acquire_pruning_dead_worker_lock,
+                   :set_worker_thread_payload,
+                   :worker_start_time,
+                   :worker_thread_done_working
 
-      def_delegators :@stats_access, :clear_stat,
-                                     :decremet_stat,
-                                     :increment_stat,
-                                     :stat
+    def_delegators :@stats_access, :clear_stat,
+                   :decremet_stat,
+                   :increment_stat,
+                   :stat
 
     # Compatibility with any non-Resque classes that were using Resque.redis as a way to access Redis
-    def method_missing(sym,*args,&block)
+    def method_missing(sym, *args, &block)
       # TODO: deprecation warning?
-      @redis.send(sym,*args,&block)
+      @redis.send(sym, *args, &block)
     end
 
     # make use respond like redis
-    def respond_to?(method,include_all=false)
-      @redis.respond_to?(method,include_all) || super
+    def respond_to?(method, include_all = false)
+      @redis.respond_to?(method, include_all) || super
     end
 
     # Get a string identifying the underlying server.
@@ -74,13 +74,13 @@ module Resque
     # Returns an array of all known Resque keys in Redis. Redis' KEYS operation
     # is O(N) for the keyspace, so be careful - this can be slow for big databases.
     def all_resque_keys
-      @redis.keys("*").map do |key|
+      @redis.keys('*').map do |key|
         key.sub("#{@redis.namespace}:", '')
       end
     end
 
     def server_time
-      time, _ = @redis.time
+      time, = @redis.time
       Time.at(time)
     end
 
@@ -88,7 +88,8 @@ module Resque
       def initialize(redis)
         @redis = redis
       end
-      def push_to_queue(queue,encoded_item)
+
+      def push_to_queue(queue, encoded_item)
         @redis.pipelined do
           watch_queue(queue)
           @redis.rpush redis_key_for_queue(queue), encoded_item
@@ -129,7 +130,7 @@ module Resque
       end
 
       # Remove data from the queue, if it's there, returning the number of removed elements
-      def remove_from_queue(queue,data)
+      def remove_from_queue(queue, data)
         @redis.lrem(redis_key_for_queue(queue), 0, data)
       end
 
@@ -143,16 +144,15 @@ module Resque
         if count == 1
           @redis.lindex(key, start)
         else
-          Array(@redis.lrange(key, start, start+count-1))
+          Array(@redis.lrange(key, start, start + count - 1))
         end
       end
 
-    private
+      private
 
       def redis_key_for_queue(queue)
         "queue:#{queue}"
       end
-
     end
 
     class FailedQueueAccess
@@ -164,15 +164,15 @@ module Resque
         @redis.sadd(:failed_queues, failed_queue_name)
       end
 
-      def remove_failed_queue(failed_queue_name=:failed)
+      def remove_failed_queue(failed_queue_name = :failed)
         @redis.del(failed_queue_name)
       end
 
-      def num_failed(failed_queue_name=:failed)
+      def num_failed(failed_queue_name = :failed)
         @redis.llen(failed_queue_name).to_i
       end
 
-      def failed_queue_names(find_queue_names_in_key=nil)
+      def failed_queue_names(find_queue_names_in_key = nil)
         if find_queue_names_in_key.nil?
           [:failed]
         else
@@ -180,21 +180,21 @@ module Resque
         end
       end
 
-      def push_to_failed_queue(data,failed_queue_name=:failed)
-        @redis.rpush(failed_queue_name,data)
+      def push_to_failed_queue(data, failed_queue_name = :failed)
+        @redis.rpush(failed_queue_name, data)
       end
 
-      def clear_failed_queue(failed_queue_name=:failed)
+      def clear_failed_queue(failed_queue_name = :failed)
         @redis.del(failed_queue_name)
       end
 
-      def update_item_in_failed_queue(index_in_failed_queue,new_item_data,failed_queue_name=:failed)
+      def update_item_in_failed_queue(index_in_failed_queue, new_item_data, failed_queue_name = :failed)
         @redis.lset(failed_queue_name, index_in_failed_queue, new_item_data)
       end
 
-      def remove_from_failed_queue(index_in_failed_queue,failed_queue_name=nil)
+      def remove_from_failed_queue(index_in_failed_queue, failed_queue_name = nil)
         failed_queue_name ||= :failed
-        hopefully_unique_value_we_can_use_to_delete_job = ""
+        hopefully_unique_value_we_can_use_to_delete_job = ''
         @redis.lset(failed_queue_name, index_in_failed_queue, hopefully_unique_value_we_can_use_to_delete_job)
         @redis.lrem(failed_queue_name, 1,                     hopefully_unique_value_we_can_use_to_delete_job)
       end
@@ -210,9 +210,9 @@ module Resque
       end
 
       def worker_threads_map(worker_ids)
-        thread_redis_keys = worker_ids.map { |id| redis_key_for_worker_threads(id) }.map { |key|
+        thread_redis_keys = worker_ids.map { |id| redis_key_for_worker_threads(id) }.map do |key|
           @redis.smembers(key)
-        }.flatten.compact.map { |id| redis_key_for_worker_thread(id) }
+        end.flatten.compact.map { |id| redis_key_for_worker_thread(id) }
         if thread_redis_keys.any?
           thread_redis_keys.zip(@redis.mget(*thread_redis_keys) || []).to_h
         else
@@ -243,7 +243,7 @@ module Resque
       def unregister_worker(worker, &block)
         while id = @redis.spop(redis_key_for_worker_threads(worker))
           @redis.del(redis_key_for_worker_thread(id))
-          @redis.del(redis_key_for_worker_thread(id).to_s.split(':')[0..-2].join(":") + ":kills")
+          @redis.del(redis_key_for_worker_thread(id).to_s.split(':')[0..-2].join(':') + ':kills')
         end
         @redis.pipelined do
           @redis.srem(:workers, worker)
@@ -274,7 +274,7 @@ module Resque
       end
 
       def acquire_pruning_dead_worker_lock(worker, expiry)
-        @redis.set(redis_key_for_worker_pruning, worker.to_s, :ex => expiry.ceil, :nx => true)
+        @redis.set(redis_key_for_worker_pruning, worker.to_s, ex: expiry.ceil, nx: true)
       end
 
       def check_for_kill_signals(worker)
@@ -306,7 +306,7 @@ module Resque
         end
       end
 
-    private
+      private
 
       def redis_key_for_worker(worker)
         "worker:#{worker}"
@@ -329,7 +329,7 @@ module Resque
       end
 
       def redis_key_for_worker_pruning
-        "pruning_dead_workers_in_progress"
+        'pruning_dead_workers_in_progress'
       end
     end
 
@@ -337,6 +337,7 @@ module Resque
       def initialize(redis)
         @redis = redis
       end
+
       def stat(stat)
         @redis.get("stat:#{stat}").to_i
       end

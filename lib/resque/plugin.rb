@@ -11,28 +11,24 @@ module Resque
       hooks = before_hooks(plugin) + around_hooks(plugin) + after_hooks(plugin)
 
       hooks.each do |hook|
-        if hook.to_s.end_with?("perform")
-          raise LintError, "#{plugin}.#{hook} is not namespaced"
-        end
+        raise LintError, "#{plugin}.#{hook} is not namespaced" if hook.to_s.end_with?('perform')
       end
 
       failure_hooks(plugin).each do |hook|
-        if hook.to_s.end_with?("failure")
-          raise LintError, "#{plugin}.#{hook} is not namespaced"
-        end
+        raise LintError, "#{plugin}.#{hook} is not namespaced" if hook.to_s.end_with?('failure')
       end
     end
 
     @job_methods = {}
     def job_methods(job)
-      @job_methods[job] ||= job.methods.collect{|m| m.to_s}
+      @job_methods[job] ||= job.methods.collect { |m| m.to_s }
     end
 
     # Given an object, and a method prefix, returns a list of methods prefixed
     # with that name (hook names).
     def get_hook_names(job, hook_method_prefix)
       methods = (job.respond_to?(:hooks) && job.hooks) || job_methods(job)
-      methods.select{|m| m.start_with?(hook_method_prefix)}.sort
+      methods.select { |m| m.start_with?(hook_method_prefix) }.sort
     end
 
     # Given an object, returns a list `before_perform` hook names.

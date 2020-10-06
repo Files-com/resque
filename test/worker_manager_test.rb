@@ -1,12 +1,12 @@
 require 'test_helper'
 
-describe "Resque::WorkerManager" do
-  it "prunes dead workers with heartbeat older than prune interval" do
+describe 'Resque::WorkerManager' do
+  it 'prunes dead workers with heartbeat older than prune interval' do
     assert_equal({}, Resque::WorkerManager.all_heartbeats)
     now = Time.now
 
     workerA = Resque::Worker.new(:jobs)
-    workerA.to_s = "bar:3:jobs"
+    workerA.to_s = 'bar:3:jobs'
     workerA.register_worker
     workerA.heartbeat!(now - Resque.prune_interval - 1)
 
@@ -14,7 +14,7 @@ describe "Resque::WorkerManager" do
     assert Resque::WorkerManager.all_heartbeats.key?(workerA.to_s)
 
     workerB = Resque::Worker.new(:jobs)
-    workerB.to_s = "foo:5:jobs"
+    workerB.to_s = 'foo:5:jobs'
     workerB.register_worker
     workerB.heartbeat!(now)
 
@@ -30,7 +30,7 @@ describe "Resque::WorkerManager" do
     assert_equal [], Resque::WorkerManager.all_workers_with_expired_heartbeats
   end
 
-  it "does not prune if another worker has pruned (started pruning) recently" do
+  it 'does not prune if another worker has pruned (started pruning) recently' do
     now = Time.now
     workerA = Resque::Worker.new(:jobs)
     workerA.to_s = 'workerA:1:jobs'
@@ -49,7 +49,7 @@ describe "Resque::WorkerManager" do
     assert_equal [], Resque::WorkerManager.all_workers_with_expired_heartbeats
 
     workerC = Resque::Worker.new(:jobs)
-    workerC.to_s = "workerC:1:jobs"
+    workerC.to_s = 'workerC:1:jobs'
     workerC.register_worker
     workerC.heartbeat!(now - Resque.prune_interval - 1)
     assert_equal 2, Resque.workers.size
@@ -68,7 +68,7 @@ describe "Resque::WorkerManager" do
 
   it "does not prune workers that haven't set a heartbeat" do
     workerA = Resque::Worker.new(:jobs)
-    workerA.to_s = "bar:3:jobs"
+    workerA.to_s = 'bar:3:jobs'
     workerA.register_worker
 
     assert_equal 1, Resque.workers.size
@@ -79,7 +79,7 @@ describe "Resque::WorkerManager" do
     assert_equal 1, Resque.workers.size
   end
 
-  it "does return a valid time when asking for heartbeat" do
+  it 'does return a valid time when asking for heartbeat' do
     workerA = Resque::Worker.new(:jobs)
     workerA.register_worker
     workerA.heartbeat!
@@ -90,14 +90,14 @@ describe "Resque::WorkerManager" do
     assert_equal nil, workerA.heartbeat
   end
 
-  it "removes old heartbeats before starting heartbeat thread" do
+  it 'removes old heartbeats before starting heartbeat thread' do
     workerA = Resque::Worker.new(:jobs)
     workerA.register_worker
     workerA.expects(:remove_heartbeat).once
     workerA.start_heartbeat
   end
 
-  it "cleans up heartbeat after unregistering" do
+  it 'cleans up heartbeat after unregistering' do
     workerA = Resque::Worker.new(:jobs)
     workerA.register_worker
     workerA.start_heartbeat
@@ -115,9 +115,9 @@ describe "Resque::WorkerManager" do
     assert_equal nil, workerA.heartbeat
   end
 
-  it "does not generate heartbeats that depend on the worker clock, but only on the server clock" do
+  it 'does not generate heartbeats that depend on the worker clock, but only on the server clock' do
     server_time_before = Resque.data_store.server_time
-    fake_time = Time.parse("2000-01-01")
+    fake_time = Time.parse('2000-01-01')
 
     with_fake_time(fake_time) do
       worker_time = Time.now
@@ -135,9 +135,9 @@ describe "Resque::WorkerManager" do
     end
   end
 
-  it "correctly reports errors that occur while pruning workers" do
+  it 'correctly reports errors that occur while pruning workers' do
     workerA = Resque::Worker.new(:jobs)
-    workerA.to_s = "bar:3:jobs"
+    workerA.to_s = 'bar:3:jobs'
     workerA.register_worker
     workerA.heartbeat!(Time.now - Resque.prune_interval - 1)
 
@@ -150,8 +150,8 @@ describe "Resque::WorkerManager" do
     assert_match(/Redis::CannotConnectError/, exception_caught.message)
   end
 
-  describe ".worker_id_from_thread_id" do
-    it "works" do
+  describe '.worker_id_from_thread_id' do
+    it 'works' do
       worker_id = "#{`hostname`.chomp}:#{$$}:jobs:1:1:100"
       assert_equal Resque::WorkerManager.worker_id_from_thread_id("#{worker_id}:1:1"), worker_id
     end

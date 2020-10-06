@@ -56,44 +56,38 @@ module Resque
       self.verbose = verbose_value if verbose_value
       self.very_verbose = ENV['VVERBOSE'] if ENV['VVERBOSE']
       self.term_timeout = (ENV['RESQUE_TERM_TIMEOUT'] || 30.0).to_f
-      self.jobs_per_fork = [ (ENV['JOBS_PER_FORK'] || 1).to_i, 1 ].max
-      self.worker_count = [ (ENV['WORKER_COUNT'] || 1).to_i, 1 ].max
-      self.thread_count = [ (ENV['THREAD_COUNT'] || 1).to_i, 1 ].max
+      self.jobs_per_fork = [(ENV['JOBS_PER_FORK'] || 1).to_i, 1].max
+      self.worker_count = [(ENV['WORKER_COUNT'] || 1).to_i, 1].max
+      self.thread_count = [(ENV['THREAD_COUNT'] || 1).to_i, 1].max
 
-      if ENV['STATSD_KEY'] and ENV['STATSD_HOST'] and ENV['STATSD_PORT']
+      if ENV['STATSD_KEY'] && ENV['STATSD_HOST'] && ENV['STATSD_PORT']
         self.statsd = Statsd.new(ENV['STATSD_HOST'], ENV['STATSD_PORT'])
         self.statsd_key = ENV['STATSD_KEY']
       end
 
       self.queues = queues
-      log_with_severity :debug, "Worker initialized"
+      log_with_severity :debug, 'Worker initialized'
     end
 
     def prepare
-      if ENV['BACKGROUND']
-        Process.daemon(true)
-      end
+      Process.daemon(true) if ENV['BACKGROUND']
 
-      if ENV['PIDFILE']
-        File.open(ENV['PIDFILE'], 'w') { |f| f << pid }
-      end
+      File.open(ENV['PIDFILE'], 'w') { |f| f << pid } if ENV['PIDFILE']
     end
 
     WILDCARDS = ['*', '?', '{', '}', '[', ']'].freeze
 
     def queues=(queues)
-      queues = queues.empty? ? (ENV["QUEUES"] || ENV['QUEUE']).to_s.split(',') : queues
+      queues = queues.empty? ? (ENV['QUEUES'] || ENV['QUEUE']).to_s.split(',') : queues
       @queues = queues.map { |queue| queue.to_s.strip }
-      @has_dynamic_queues = WILDCARDS.any? {|char| @queues.join.include?(char) }
+      @has_dynamic_queues = WILDCARDS.any? { |char| @queues.join.include?(char) }
       validate_queues
     end
 
     def validate_queues
-      if @queues.nil? || @queues.empty?
-        raise NoQueueError.new("Please give each worker at least one queue.")
-      end
-      if @has_dynamic_queues and @queues.any? { |queue| queue =~ /:/ }
-        raise NoQueueError.new("You cannot use the colon syntax for defining max workers per queue if you are also using dynamic queues.")
+      raise NoQueueError, 'Please give each worker at least one queue.' if @queues.nil? || @queues.empty?
+      if @has_dynamic_queues && @queues.any? { |queue| queue =~ /:/ }
+        raise NoQueueError, 'You cannot use the colon syntax for defining max workers per queue if you are also using dynamic queues.'
       end
     end
 
@@ -107,9 +101,9 @@ module Resque
     end
 
     def glob_match(list, pattern)
-      list.select { |queue|
+      list.select do |queue|
         File.fnmatch?(pattern, queue)
-      }.sort
+      end.sort
     end
 
     def work(interval = 0.1, &block)
@@ -121,17 +115,19 @@ module Resque
       else
         @children = {}
         log_with_severity :debug, "Launching #{worker_count} worker(s)."
-        (0..(worker_count - 1)).map { |index|
+        (0..(worker_count - 1)).map do |index|
           fork_worker_process(OpenStruct.new(index: index, interval: interval), &block)
-        }
+        end
 
         loop do
           children = @children
-          children.each do |index,child|
+          children.each do |index, child|
             if child
               if Process.waitpid(child, Process::WNOHANG)
                 @children[index] = nil
-                fork_worker_process(OpenStruct.new(index: index, interval: interval), &block) unless interval.zero? || shutdown?
+                unless interval.zero? || shutdown?
+                  fork_worker_process(OpenStruct.new(index: index, interval: interval), &block)
+                end
               end
             elsif shutdown?
               log_with_severity :debug, "Deleting Worker index #{index} for shutdown."
@@ -139,31 +135,33 @@ module Resque
             end
           end
 
-          break if (interval.zero? || shutdown?) and @children.size == 0
+          break if (interval.zero? || shutdown?) && (@children.size == 0)
+
           sleep interval
         end
       end
 
       unregister_worker
-    rescue Exception => exception
-      return if exception.class == SystemExit && !@children
-      log_with_severity :error, "Worker Error: #{exception.inspect} #{exception.backtrace}"
-      unregister_worker(exception)
+    rescue Exception => e
+      return if e.class == SystemExit && !@children
+
+      log_with_severity :error, "Worker Error: #{e.inspect} #{e.backtrace}"
+      unregister_worker(e)
     end
 
     def fork_worker_process(process, &block)
       log_with_severity :debug, "Forking worker process index #{process.index}."
       run_hook :before_fork, process
-      @children[process.index] = fork {
+      @children[process.index] = fork do
         @children = {}
         ActiveRecord::Base.clear_all_connections! if defined?(ActiveRecord::Base)
         log_with_severity :debug, "Successfully forked worker process index #{process.index}."
         run_hook :after_fork, process
         worker_process(process, &block)
         exit!
-      }
+      end
       srand # Reseed after fork
-      procline "Master Process - Worker Children PIDs: #{@children.values.join(",")} - Last Fork at #{Time.now.to_i}"
+      procline "Master Process - Worker Children PIDs: #{@children.values.join(',')} - Last Fork at #{Time.now.to_i}"
     end
 
     def worker_process(process, &block)
@@ -195,9 +193,7 @@ module Resque
     def job_processed
       synchronize do
         @jobs_processed += 1
-        if @jobs_processed >= jobs_per_fork
-          shutdown
-        end
+        shutdown if @jobs_processed >= jobs_per_fork
       end
     end
 
@@ -210,24 +206,25 @@ module Resque
     def set_procline
       jobs = @worker_threads.map { |thread| thread.payload_class_name }.compact
       if jobs.size > 0
-        procline "Processing Job(s): #{jobs.join(", ")}"
+        procline "Processing Job(s): #{jobs.join(', ')}"
       else
-        procline paused? ? "Paused" : "Waiting for #{queues.join(',')}"
+        procline paused? ? 'Paused' : "Waiting for #{queues.join(',')}"
       end
     end
 
     def reserve(thread_index = 0, total_threads = total_thread_count)
       index_offset = 0
       queues.each do |queue_config|
-        queue, max_threads = queue_config.split(":")
-        if max_threads =~ /[0-9]+\%/
-          max_threads = total_threads * max_threads.to_i / 100
-        else
-          max_threads = max_threads.to_i
-        end
+        queue, max_threads = queue_config.split(':')
+        max_threads = if max_threads =~ /[0-9]+\%/
+                        total_threads * max_threads.to_i / 100
+                      else
+                        max_threads.to_i
+                      end
         offset_thread_index = (thread_index - index_offset) % total_threads
         index_offset += max_threads
-        next if max_threads > 0 and offset_thread_index >= max_threads
+        next if (max_threads > 0) && (offset_thread_index >= max_threads)
+
         log_with_severity :debug, "Checking #{queue}"
         if job = Resque.reserve(queue)
           log_with_severity :debug, "Found job on #{queue}"
@@ -243,7 +240,7 @@ module Resque
     end
 
     def startup
-      $0 = "resque: Starting"
+      $0 = 'resque: Starting'
 
       register_signal_handlers
       WorkerManager.prune_dead_workers
@@ -263,16 +260,18 @@ module Resque
         trap('USR2') { pause_processing; send_child_signal('USR2') }
         trap('CONT') { unpause_processing; send_child_signal('CONT') }
       rescue ArgumentError
-        log_with_severity :warn, "Signals QUIT, USR1, USR2, and/or CONT not supported."
+        log_with_severity :warn, 'Signals QUIT, USR1, USR2, and/or CONT not supported.'
       end
 
-      log_with_severity :debug, "Registered signals"
+      log_with_severity :debug, 'Registered signals'
     end
 
     def send_child_signal(signal)
-      if @children
-        @children.values.each do |child|
-          Process.kill(signal, child) rescue nil
+      @children&.values&.each do |child|
+        begin
+          Process.kill(signal, child)
+        rescue StandardError
+          nil
         end
       end
     end
@@ -286,10 +285,10 @@ module Resque
     end
 
     def worker_thread_kill_timer(sleep_time = 50)
-      Thread.new {
+      Thread.new do
         sleep(sleep_time)
         kill_worker_threads
-      }
+      end
     end
 
     def shutdown
@@ -324,7 +323,7 @@ module Resque
     end
 
     def update_consul_disabled
-      @consul_disabled = (File.exist?("/etc/consul_disabled") or File.exist?("/tmp/consul_disabled"))
+      @consul_disabled = (File.exist?('/etc/consul_disabled') or File.exist?('/tmp/consul_disabled'))
     end
 
     def paused?
@@ -332,13 +331,13 @@ module Resque
     end
 
     def pause_processing
-      log_with_severity :info, "USR2 received; pausing job processing"
+      log_with_severity :info, 'USR2 received; pausing job processing'
       run_hook :before_pause, self
       @paused = true
     end
 
     def unpause_processing
-      log_with_severity :info, "CONT received; resuming job processing"
+      log_with_severity :info, 'CONT received; resuming job processing'
       @paused = false
       run_hook :after_pause, self
     end
@@ -349,12 +348,12 @@ module Resque
 
     def unregister_worker(exception = nil)
       @worker_threads.each do |thread|
-        if job = thread.job
-          begin
-            job.fail(exception || DirtyExit.new("Job still being processed"))
-          rescue RuntimeError => e
-            log_with_severity :error, e.message
-          end
+        next unless job = thread.job
+
+        begin
+          job.fail(exception || DirtyExit.new('Job still being processed'))
+        rescue RuntimeError => e
+          log_with_severity :error, e.message
         end
       end
 
@@ -364,24 +363,24 @@ module Resque
         Stat.clear("processed:#{self}")
         Stat.clear("failed:#{self}")
       end
-    rescue Exception => exception_while_unregistering
-      message = exception_while_unregistering.message
+    rescue Exception => e
+      message = e.message
       if exception
         message += "\nOriginal Exception (#{exception.class}): #{exception.message}"
         message += "\n  #{exception.backtrace.join("  \n")}" if exception.backtrace
       end
-      fail(exception_while_unregistering.class,
-           message,
-           exception_while_unregistering.backtrace)
+      raise(e.class,
+            message,
+            e.backtrace)
     end
 
     def processed!
-      Stat << "processed"
+      Stat << 'processed'
       Stat << "processed:#{self}"
     end
 
     def failed!
-      Stat << "failed"
+      Stat << 'failed'
       Stat << "failed:#{self}"
     end
 
@@ -394,13 +393,13 @@ module Resque
     end
 
     def inspect
-      "#<Worker #{to_s}>"
+      "#<Worker #{self}>"
     end
 
     def to_s
-      @to_s ||= "#{hostname}:#{master_pid}:#{@queues.join(',').gsub(":", "~")}:#{worker_count}:#{thread_count}:#{jobs_per_fork}"
+      @to_s ||= "#{hostname}:#{master_pid}:#{@queues.join(',').gsub(':', '~')}:#{worker_count}:#{thread_count}:#{jobs_per_fork}"
     end
-    alias_method :id, :to_s
+    alias id to_s
 
     def hostname
       @hostname ||= Socket.gethostname
@@ -426,7 +425,7 @@ module Resque
 
     attr_reader :verbose, :very_verbose
 
-    def verbose=(value);
+    def verbose=(value)
       if value && !very_verbose
         Resque.logger.formatter = VerboseFormatter.new
         Resque.logger.level = Logger::INFO
@@ -459,6 +458,7 @@ module Resque
       hooks = Resque.send(name)
       return if hooks.empty?
       return if name == :before_first_fork && @before_first_fork_hook_ran
+
       msg = "Running #{name} hooks"
       msg << " with #{args.inspect}" if args.any?
       log_with_severity :info, msg

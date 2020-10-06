@@ -19,26 +19,22 @@ module Resque
 
       def save
         data = {
-          :failed_at => Time.now.strftime("%Y/%m/%d %H:%M:%S %Z"),
-          :payload   => payload,
-          :exception => exception.class.to_s,
-          :error     => UTF8Util.clean(exception.to_s),
-          :backtrace => filter_backtrace(Array(exception.backtrace)),
-          :worker    => worker.to_s,
-          :queue     => queue
+          failed_at: Time.now.strftime('%Y/%m/%d %H:%M:%S %Z'),
+          payload: payload,
+          exception: exception.class.to_s,
+          error: UTF8Util.clean(exception.to_s),
+          backtrace: filter_backtrace(Array(exception.backtrace)),
+          worker: worker.to_s,
+          queue: queue
         }
 
         rdata = Resque.encode(data)
         Resque.redis.rpush(:failed, rdata)
 
-        unless self.class.whitelist.include? data[:exception]
-          self.class.failure_block.call(data) if self.class.failure_block
-        end
+        self.class.failure_block&.call(data) unless self.class.whitelist.include? data[:exception]
 
         gen = payload['generation'] || 1
-        if gen == self.class.expire_generation
-          self.class.expire_block.call(data) if self.class.expire_block
-        end
+        self.class.expire_block&.call(data) if gen == self.class.expire_generation
       end
 
       def self.count(queue = nil, class_name = nil)
@@ -46,7 +42,7 @@ module Resque
 
         if class_name
           n = 0
-          each(0, count(queue), queue, class_name) { n += 1 } 
+          each(0, count(queue), queue, class_name) { n += 1 }
           n
         else
           data_store.num_failed
@@ -62,26 +58,28 @@ module Resque
         Resque.list_range(:failed, offset, limit)
       end
 
-      def self.each(offset = 0, limit = self.count, queue = :failed, class_name = nil, order = 'desc')
+      def self.each(offset = 0, limit = count, queue = :failed, class_name = nil, order = 'desc')
         if class_name
           original_limit = limit
           limit = count
         end
-        all_items = limit == 1 ? [all(offset,limit,queue)] : Array(all(offset, limit, queue))
+        all_items = limit == 1 ? [all(offset, limit, queue)] : Array(all(offset, limit, queue))
         reversed = false
         if order.eql? 'desc'
           all_items.reverse!
           reversed = true
         end
         all_items.each_with_index do |item, i|
-          if !class_name || (item['payload'] && item['payload']['class'] == class_name && (original_limit -= 1) >= 0)
-            if reversed
-              id = (all_items.length - 1) + (offset - i)
-            else
-              id = offset + i
-            end
-            yield id, item
+          unless !class_name || (item['payload'] && item['payload']['class'] == class_name && (original_limit -= 1) >= 0)
+            next
           end
+
+          id = if reversed
+                 (all_items.length - 1) + (offset - i)
+               else
+                 offset + i
+               end
+          yield id, item
         end
       end
 
@@ -93,7 +91,7 @@ module Resque
 
       # clearing the failure queue only removes jobs which have been retried
       # this makes it impossible to lose failing jobs
-      def self.clear(queue = nil)
+      def self.clear(_queue = nil)
         ulim = Resque::Failure.count - 1
         ulim.downto(0) do |i|
           job = Resque::Failure.all(i)
@@ -105,7 +103,7 @@ module Resque
       def self.requeue(index, queue = nil)
         check_queue(queue)
         item = all(index)
-        item['retried_at'] = Time.now.strftime("%Y/%m/%d %H:%M:%S")
+        item['retried_at'] = Time.now.strftime('%Y/%m/%d %H:%M:%S')
         Resque.redis.lset(:failed, index, Resque.encode(item))
 
         payload = item['payload']
@@ -123,8 +121,8 @@ module Resque
       def self.requeue_queue(queue)
         i = 0
         while job = all(i)
-           requeue(i) if job['queue'] == queue
-           i += 1
+          requeue(i) if job['queue'] == queue
+          i += 1
         end
       end
 
@@ -132,8 +130,8 @@ module Resque
         while (fdata = Resque.redis.lpop(:failed))
           begin
             data = JSON.load(fdata)
-            qdata = JSON.dump(data["payload"])
-            queue = data["queue"]
+            qdata = JSON.dump(data['payload'])
+            queue = data['queue']
             Resque.redis.rpush("queue:#{queue}", qdata)
             data = fdata = qdata = queue = nil
           rescue Oj::ParseError
@@ -164,7 +162,7 @@ module Resque
       end
 
       def self.check_queue(queue)
-        raise ArgumentError, "invalid queue: #{queue}" if queue && queue.to_s != "failed"
+        raise ArgumentError, "invalid queue: #{queue}" if queue && queue.to_s != 'failed'
       end
 
       def filter_backtrace(backtrace)

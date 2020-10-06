@@ -77,7 +77,7 @@ module Resque
     end
 
     # Iterate across all failures with the given options
-    def self.each(offset = 0, limit = self.count, queue = nil, class_name = nil, order = 'desc', &block)
+    def self.each(offset = 0, limit = count, queue = nil, class_name = nil, order = 'desc', &block)
       backend.each(offset, limit, queue, class_name, order, &block)
     end
 
@@ -115,6 +115,5 @@ module Resque
     def self.remove_queue(queue)
       backend.remove_queue(queue)
     end
-
   end
 end

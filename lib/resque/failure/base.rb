@@ -28,11 +28,10 @@ module Resque
       # and #save is called.
       #
       # This is where you POST or PUT or whatever to your Failure service.
-      def save
-      end
+      def save; end
 
       # The number of failures.
-      def self.count(queue = nil, class_name = nil)
+      def self.count(_queue = nil, _class_name = nil)
         0
       end
 
@@ -42,27 +41,22 @@ module Resque
       end
 
       # Returns a paginated array of failure objects.
-      def self.all(offset = 0, limit = 1, queue = nil)
+      def self.all(_offset = 0, _limit = 1, _queue = nil)
         []
       end
 
       # Iterate across failed objects
-      def self.each(*args)
-      end
+      def self.each(*args); end
 
       # A URL where someone can go to view failures.
-      def self.url
-      end
+      def self.url; end
 
       # Clear all failure objects
-      def self.clear(*args)
-      end
+      def self.clear(*args); end
 
-      def self.requeue(*args)
-      end
+      def self.requeue(*args); end
 
-      def self.remove(*args)
-      end
+      def self.remove(*args); end
 
       # Logging!
       def log(message)

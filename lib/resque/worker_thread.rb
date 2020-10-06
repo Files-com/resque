@@ -49,7 +49,8 @@ module Resque
         if work_one_job(&@block)
           worker.job_processed
         else
-          break if interval.zero? or worker.shutdown?
+          break if interval.zero? || worker.shutdown?
+
           worker.set_procline
           log_with_severity :debug, "Sleeping for #{interval} seconds"
           sleep interval
@@ -58,7 +59,7 @@ module Resque
     end
 
     def work_one_job(&block)
-      return false if worker.paused? or worker.shutdown?
+      return false if worker.paused? || worker.shutdown?
       return false unless @job = worker.reserve(global_index)
 
       worker.set_procline
@@ -71,9 +72,7 @@ module Resque
       begin
         @job_thread = Thread.new { perform(&block) }
         @job_thread.join
-        if @job_thread.status.nil? or @killed
-          raise DirtyExit.new("Job was killed")
-        end
+        raise DirtyExit, 'Job was killed' if @job_thread.status.nil? || @killed
       rescue Object => e
         report_failed_job(e)
       end
@@ -98,9 +97,9 @@ module Resque
 
     def set_payload
       data = worker.encode \
-        :queue   => @job.queue,
-        :run_at  => Time.now.utc.iso8601,
-        :payload => @job.payload
+        queue: @job.queue,
+        run_at: Time.now.utc.iso8601,
+        payload: @job.payload
       data_store.set_worker_thread_payload(self, data)
     end
 
@@ -114,15 +113,14 @@ module Resque
       log_with_severity :error, "#{@job.inspect} failed: #{exception.inspect}"
       begin
         @job&.fail(exception)
-      rescue Object => exception
-        log_with_severity :error, "Received exception when reporting failure: #{exception.inspect}"
+      rescue Object => e
+        log_with_severity :error, "Received exception when reporting failure: #{e.inspect}"
       end
       begin
         worker.failed!
-      rescue Object => exception
-        log_with_severity :error, "Received exception when increasing failed jobs counter (redis issue) : #{exception.inspect}"
+      rescue Object => e
+        log_with_severity :error, "Received exception when increasing failed jobs counter (redis issue) : #{e.inspect}"
       end
     end
   end
 end
-

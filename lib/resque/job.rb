@@ -19,14 +19,14 @@ module Resque
     def redis
       Resque.redis
     end
-    alias :data_store :redis
+    alias data_store redis
 
     def self.redis
       Resque.redis
     end
 
     def self.data_store
-      self.redis
+      redis
     end
 
     # Given a Ruby object, returns a string suitable for storage in a
@@ -95,7 +95,7 @@ module Resque
     #
     # Raises an exception if no queue or class is given.
     def self.create(queue, klass, *args)
-      self.create_extended(queue, klass, new_uuid, 1, *args)
+      create_extended(queue, klass, new_uuid, 1, *args)
     end
 
     def self.create_extended(queue, klass, id, generation, *args)
@@ -103,18 +103,18 @@ module Resque
 
       if Resque.inline?
         new(:inline, {
-          'class' => klass,
-          'args' => decode(encode(args)),
-          'id' => id,
-          'generation' => generation
-        }).perform
+              'class' => klass,
+              'args' => decode(encode(args)),
+              'id' => id,
+              'generation' => generation
+            }).perform
       else
         Resque.push(queue, {
-         :class => klass.to_s,
-         :args => args,
-         :id => id,
-         :generation => generation
-        })
+                      class: klass.to_s,
+                      args: args,
+                      id: id,
+                      generation: generation
+                    })
       end
     end
 
@@ -154,7 +154,7 @@ module Resque
       redis.lrange(queue, 0, -1).each do |string|
         ob = decode(string)
         if ob['class'] == klass &&
-            (args.empty? || args == ob['args'])
+           (args.empty? || args == ob['args'])
           destroyed += redis.lrem(queue, 0, string).to_i
         end
       end
@@ -166,6 +166,7 @@ module Resque
     # if any jobs are available. If not, returns nil.
     def self.reserve(queue)
       return unless payload = Resque.pop(queue)
+
       new(queue, payload)
     end
 
@@ -219,7 +220,7 @@ module Resque
         end
 
         # Return true if the job was performed
-        return job_was_performed
+        job_was_performed
 
       # If an exception occurs during the job execution, look for an
       # on_failure hook then re-raise.
@@ -255,29 +256,27 @@ module Resque
     # Given an exception object, hands off the needed parameters to
     # the Failure module.
     def fail(exception)
-      begin
-        run_failure_hooks(exception)
-      rescue Exception => e
-        raise e
-      ensure
-        Failure.create \
-          :payload   => payload,
-          :exception => exception,
-          :worker    => worker,
-          :queue     => queue
-      end
+      run_failure_hooks(exception)
+    rescue Exception => e
+      raise e
+    ensure
+      Failure.create \
+        payload: payload,
+        exception: exception,
+        worker: worker,
+        queue: queue
     end
 
     # Creates an identical job, essentially placing this job back on
     # the queue.
     def recreate
-      self.class.create_extended(queue, payload_class, id, generation+1, *args)
+      self.class.create_extended(queue, payload_class, id, generation + 1, *args)
     end
 
     # String representation
     def inspect
       obj = @payload
-      "(Job{%s} | %s | %s)" % [ @queue, obj['class'], obj['args'].inspect ]
+      format('(Job{%s} | %s | %s)', @queue, obj['class'], obj['args'].inspect)
     end
 
     # Equality
@@ -304,18 +303,16 @@ module Resque
     end
 
     def run_failure_hooks(exception)
-      begin
-        job_args = args || []
-        if has_payload_class?
-          failure_hooks.each { |hook| payload_class.send(hook, exception, *job_args) } unless @failure_hooks_ran
-        end
-      rescue Exception => e
-        error_message = "Additional error (#{e.class}: #{e}) occurred in running failure hooks for job #{inspect}\n" \
-                        "Original error that caused job failure was #{e.class}: #{exception.class}: #{exception.message}"
-        raise RuntimeError.new(error_message)
-      ensure
-        @failure_hooks_ran = true
+      job_args = args || []
+      if has_payload_class?
+        failure_hooks.each { |hook| payload_class.send(hook, exception, *job_args) } unless @failure_hooks_ran
       end
+    rescue Exception => e
+      error_message = "Additional error (#{e.class}: #{e}) occurred in running failure hooks for job #{inspect}\n" \
+                      "Original error that caused job failure was #{e.class}: #{exception.class}: #{exception.message}"
+      raise error_message
+    ensure
+      @failure_hooks_ran = true
     end
   end
 end

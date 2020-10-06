@@ -1,10 +1,10 @@
-require "rake"
-require "test_helper"
-require "mocha"
+require 'rake'
+require 'test_helper'
+require 'mocha'
 
-describe "rake tasks" do
+describe 'rake tasks' do
   before do
-    Rake.application.rake_require "tasks/resque"
+    Rake.application.rake_require 'tasks/resque'
   end
 
   after do
@@ -14,17 +14,16 @@ describe "rake tasks" do
   end
 
   describe 'resque:work' do
-
-    it "requires QUEUE environment variable" do
-      assert_system_exit("set QUEUE env var, e.g. $ QUEUE=critical,high rake resque:work") do
-        run_rake_task("resque:work")
+    it 'requires QUEUE environment variable' do
+      assert_system_exit('set QUEUE env var, e.g. $ QUEUE=critical,high rake resque:work') do
+        run_rake_task('resque:work')
       end
     end
 
-    it "works when multiple queues specified" do
-      ENV["QUEUES"] = "high,low"
+    it 'works when multiple queues specified' do
+      ENV['QUEUES'] = 'high,low'
       Resque::Worker.any_instance.expects(:work)
-      run_rake_task("resque:work")
+      run_rake_task('resque:work')
     end
 
     describe 'log output' do
@@ -36,25 +35,24 @@ describe "rake tasks" do
         Resque.enqueue_to(:jobs, SomeJob, 20, '/tmp')
       end
 
-      it "triggers DEBUG level logging when VVERBOSE is set to 1" do
+      it 'triggers DEBUG level logging when VVERBOSE is set to 1' do
         ENV['VVERBOSE'] = '1'
         ENV['QUEUES'] = 'jobs'
         Resque::Worker.any_instance.expects(:work)
-        run_rake_task("resque:work")
+        run_rake_task('resque:work')
         assert_includes messages.string, 'Starting worker' # Include an info level statement
         assert_includes messages.string, 'Worker initialized' # Includes a debug level statement
       end
 
-      it "triggers INFO level logging when VERBOSE is set to 1" do
+      it 'triggers INFO level logging when VERBOSE is set to 1' do
         ENV['VERBOSE'] = '1'
         ENV['QUEUES'] = 'jobs'
         Resque::Worker.any_instance.expects(:work)
-        run_rake_task("resque:work")
+        run_rake_task('resque:work')
         assert_includes messages.string, 'Starting worker' # Include an info level statement
         refute_includes messages.string, 'Worker initialized' # Does not a debug level statement
       end
     end
-
   end
 
   def run_rake_task(name)
@@ -63,13 +61,10 @@ describe "rake tasks" do
   end
 
   def assert_system_exit(expected_message)
-    begin
-      capture_io { yield }
-      fail 'Expected task to abort'
-    rescue Exception => e
-      assert_equal e.message, expected_message
-      assert_equal e.class, SystemExit
-    end
+    capture_io { yield }
+    raise 'Expected task to abort'
+  rescue Exception => e
+    assert_equal e.message, expected_message
+    assert_equal e.class, SystemExit
   end
-
 end

@@ -5,9 +5,7 @@ require 'resque/version'
 require 'time'
 require 'yaml'
 
-if defined?(Encoding) && Encoding.default_external != Encoding::UTF_8
-  Encoding.default_external = Encoding::UTF_8
-end
+Encoding.default_external = Encoding::UTF_8 if defined?(Encoding) && Encoding.default_external != Encoding::UTF_8
 
 module Resque
   class Server < Sinatra::Base
@@ -15,7 +13,7 @@ module Resque
 
     dir = File.dirname(File.expand_path(__FILE__))
 
-    set :views,  "#{dir}/server/views"
+    set :views, "#{dir}/server/views"
 
     if respond_to? :public_folder
       set :public_folder, "#{dir}/server/public"
@@ -30,15 +28,15 @@ module Resque
       alias_method :h, :escape_html
 
       def current_section
-        url_path request.path_info.sub('/','').split('/')[0].downcase
+        url_path request.path_info.sub('/', '').split('/')[0].downcase
       end
 
       def current_page
-        url_path request.path_info.sub('/','')
+        url_path request.path_info.sub('/', '')
       end
 
       def url_path(*path_parts)
-        [ url_prefix, path_prefix, path_parts ].join("/").squeeze('/')
+        [url_prefix, path_prefix, path_parts].join('/').squeeze('/')
       end
       alias_method :u, :url_path
 
@@ -79,7 +77,7 @@ module Resque
         end
       end
 
-      def redis_get_value_as_array(key, start=0)
+      def redis_get_value_as_array(key, start = 0)
         case Resque.redis.type(key)
         when 'none'
           []
@@ -98,7 +96,7 @@ module Resque
         Array(args).map do |a|
           a.to_yaml
         end.join("\n")
-      rescue
+      rescue StandardError
         args.to_s
       end
 
@@ -110,7 +108,7 @@ module Resque
         hosts = Hash.new { [] }
 
         Resque.workers.each do |worker|
-          host, _ = worker.to_s.split(':')
+          host, = worker.to_s.split(':')
           hosts[host] += [worker.to_s]
         end
 
@@ -123,43 +121,42 @@ module Resque
 
       def partial(template, local_vars = {})
         @partial = true
-        erb(template.to_sym, {:layout => false}, local_vars)
+        erb(template.to_sym, { layout: false }, local_vars)
       ensure
         @partial = false
       end
 
       def poll
-        if defined?(@polling) && @polling
-          text = "Last Updated: #{Time.now.strftime("%H:%M:%S")}"
-        else
-          text = "<a href='#{u(request.path_info)}.poll' rel='poll'>Live Poll</a>"
-        end
+        text = if defined?(@polling) && @polling
+                 "Last Updated: #{Time.now.strftime('%H:%M:%S')}"
+               else
+                 "<a href='#{u(request.path_info)}.poll' rel='poll'>Live Poll</a>"
+               end
         "<p class='poll'>#{text}</p>"
       end
-
     end
 
     def show(page, layout = true)
-      response["Cache-Control"] = "max-age=0, private, must-revalidate"
+      response['Cache-Control'] = 'max-age=0, private, must-revalidate'
       begin
-        erb page.to_sym, {:layout => layout}, :resque => Resque
+        erb page.to_sym, { layout: layout }, resque: Resque
       rescue Errno::ECONNREFUSED
-        erb :error, {:layout => false}, :error => "Can't connect to Redis! (#{Resque.redis_id})"
+        erb :error, { layout: false }, error: "Can't connect to Redis! (#{Resque.redis_id})"
       end
     end
 
     def show_for_polling(page)
-      content_type "text/html"
+      content_type 'text/html'
       @polling = true
       show(page.to_sym, false).gsub(/\s{1,}/, ' ')
     end
 
     # to make things easier on ourselves
-    get "/?" do
+    get '/?' do
       redirect url_path(:overview)
     end
 
-    %w( overview workers ).each do |page|
+    %w[overview workers].each do |page|
       get "/#{page}.poll/?" do
         show_for_polling(page)
       end
@@ -169,7 +166,7 @@ module Resque
       end
     end
 
-    %w( overview queues working workers key ).each do |page|
+    %w[overview queues working workers key].each do |page|
       get "/#{page}/?" do
         show page
       end
@@ -179,30 +176,30 @@ module Resque
       end
     end
 
-    post "/queues/:id/remove" do
+    post '/queues/:id/remove' do
       Resque.remove_queue(params[:id])
       redirect u('queues')
     end
 
-    post "/kill/:id" do
+    post '/kill/:id' do
       if thread = Resque::WorkerManager.find_thread(params[:id])
         thread.kill
         sleep Resque.heartbeat_interval * 2
         if request.xhr?
-          "Killed"
+          'Killed'
         else
           redirect u('working')
         end
       else
         if request.xhr?
-          "Killed"
+          'Killed'
         else
           redirect u('working')
         end
       end
     end
 
-    get "/failed/?" do
+    get '/failed/?' do
       if Resque::Failure.url
         redirect Resque::Failure.url
       else
@@ -210,7 +207,7 @@ module Resque
       end
     end
 
-    get "/failed/:queue" do
+    get '/failed/:queue' do
       if Resque::Failure.url
         redirect Resque::Failure.url
       else
@@ -218,27 +215,27 @@ module Resque
       end
     end
 
-    post "/failed/clear" do
+    post '/failed/clear' do
       Resque::Failure.clear
       redirect u('failed')
     end
 
-    post "/failed/:queue/clear" do
+    post '/failed/:queue/clear' do
       Resque::Failure.clear params[:queue]
       redirect u('failed')
     end
 
-    post "/failed/requeue/all" do
+    post '/failed/requeue/all' do
       Resque::Failure.requeue_all
       redirect u('failed')
     end
 
-    post "/failed/:queue/requeue/all" do
+    post '/failed/:queue/requeue/all' do
       Resque::Failure.requeue_queue Resque::Failure.job_queue_name(params[:queue])
       redirect url_path("/failed/#{params[:queue]}")
     end
 
-    get "/failed/requeue/:index/?" do
+    get '/failed/requeue/:index/?' do
       Resque::Failure.requeue(params[:index])
       retried_at = Resque::Failure.all(params[:index])['retried_at']
       Resque::Failure.remove(params[:index])
@@ -250,38 +247,38 @@ module Resque
       end
     end
 
-    get "/failed/:queue/requeue/:index/?" do
+    get '/failed/:queue/requeue/:index/?' do
       Resque::Failure.requeue(params[:index], params[:queue])
       if request.xhr?
-        return Resque::Failure.all(params[:index],1,params[:queue])['retried_at']
+        return Resque::Failure.all(params[:index], 1, params[:queue])['retried_at']
       else
         redirect url_path("/failed/#{params[:queue]}")
       end
     end
 
-    get "/failed/remove/:index/?" do
+    get '/failed/remove/:index/?' do
       Resque::Failure.remove(params[:index])
       redirect u('failed')
     end
 
-    get "/failed/:queue/remove/:index/?" do
+    get '/failed/:queue/remove/:index/?' do
       Resque::Failure.remove(params[:index], params[:queue])
       redirect url_path("/failed/#{params[:queue]}")
     end
 
-    get "/stats/?" do
-      redirect url_path("/stats/resque")
+    get '/stats/?' do
+      redirect url_path('/stats/resque')
     end
 
-    get "/stats/:id/?" do
+    get '/stats/:id/?' do
       show :stats
     end
 
-    get "/stats/keys/:key/?" do
+    get '/stats/keys/:key/?' do
       show :stats
     end
 
-    get "/stats.txt/?" do
+    get '/stats.txt/?' do
       info = Resque.info
 
       stats = []
@@ -304,15 +301,15 @@ module Resque
     end
 
     def self.tabs
-      @tabs ||= ["Overview", "Working", "Failed", "Queues", "Workers", "Stats"]
+      @tabs ||= %w[Overview Working Failed Queues Workers Stats]
     end
 
-    def self.url_prefix=(url_prefix)
-      @url_prefix = url_prefix
+    class << self
+      attr_writer :url_prefix
     end
 
     def self.url_prefix
-      (@url_prefix.nil? || @url_prefix.empty?) ? '' : @url_prefix + '/'
+      @url_prefix.nil? || @url_prefix.empty? ? '' : @url_prefix + '/'
     end
   end
 end

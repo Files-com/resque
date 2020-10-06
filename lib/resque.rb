@@ -26,7 +26,6 @@ require 'resque/thread_signal'
 
 require 'resque/vendor/utf8_util'
 
-
 module Resque
   include Helpers
   extend self
@@ -83,9 +82,7 @@ module Resque
   def constantize(camel_cased_word)
     camel_cased_word = camel_cased_word.to_s
 
-    if camel_cased_word.include?('-')
-      camel_cased_word = classify(camel_cased_word)
-    end
+    camel_cased_word = classify(camel_cased_word) if camel_cased_word.include?('-')
 
     names = camel_cased_word.split('::')
     names.shift if names.empty? || names.first.empty?
@@ -94,11 +91,11 @@ module Resque
     names.each do |name|
       args = Module.method(:const_get).arity != 1 ? [false] : []
 
-      if constant.const_defined?(name, *args)
-        constant = constant.const_get(name)
-      else
-        constant = constant.const_missing(name)
-      end
+      constant = if constant.const_defined?(name, *args)
+                   constant.const_get(name)
+                 else
+                   constant.const_missing(name)
+                 end
     end
     constant
   end
@@ -116,25 +113,25 @@ module Resque
   def redis=(server)
     case server
     when String
-      if server =~ /redis\:\/\//
-        redis = Redis.new(:url => server, :thread_safe => true)
+      if server =~ %r{redis\://}
+        redis = Redis.new(url: server, thread_safe: true)
       else
         server, namespace = server.split('/', 2)
         host, port, db = server.split(':')
-        redis = Redis.new(:host => host, :port => port,
-          :thread_safe => true, :db => db)
+        redis = Redis.new(host: host, port: port,
+                          thread_safe: true, db: db)
       end
       namespace ||= :resque
 
-      @data_store = Resque::DataStore.new(Redis::Namespace.new(namespace, :redis => redis))
+      @data_store = Resque::DataStore.new(Redis::Namespace.new(namespace, redis: redis))
     when Redis::Namespace
       @data_store = Resque::DataStore.new(server)
     when Resque::DataStore
       @data_store = server
     when Hash
-      @data_store = Resque::DataStore.new(Redis::Namespace.new(:resque, :redis => Redis.new(server)))
+      @data_store = Resque::DataStore.new(Redis::Namespace.new(:resque, redis: Redis.new(server)))
     else
-      @data_store = Resque::DataStore.new(Redis::Namespace.new(:resque, :redis => server))
+      @data_store = Resque::DataStore.new(Redis::Namespace.new(:resque, redis: server))
     end
   end
 
@@ -142,10 +139,11 @@ module Resque
   # create a new one.
   def redis
     return @data_store if @data_store
-    self.redis = Redis.respond_to?(:connect) ? Redis.connect : "localhost:6379"
-    self.redis
+
+    self.redis = Redis.respond_to?(:connect) ? Redis.connect : 'localhost:6379'
+    redis
   end
-  alias :data_store :redis
+  alias data_store redis
 
   def redis_id
     data_store.identifier
@@ -265,7 +263,7 @@ module Resque
   end
 
   def to_s
-    "Resque Client"
+    'Resque Client'
   end
 
   attr_accessor :inline
@@ -273,7 +271,7 @@ module Resque
   # If 'inline' is true Resque will call #perform method inline
   # without queuing it into Redis and without any Resque callbacks.
   # The 'inline' is false Resque jobs will be put in queue regularly.
-  alias :inline? :inline
+  alias inline? inline
 
   #
   # queue manipulation
@@ -295,7 +293,7 @@ module Resque
   #
   # Returns nothing
   def push(queue, item)
-    data_store.push_to_queue(queue,encode(item))
+    data_store.push_to_queue(queue, encode(item))
   end
 
   # Pops a job off a queue. Queue name should be a string.
@@ -320,7 +318,7 @@ module Resque
   # To get the 3rd page of a 30 item, paginatied list one would use:
   #   Resque.peek('my_list', 59, 30)
   def peek(queue, start = 0, count = 1)
-    results = data_store.peek_in_queue(queue,start,count)
+    results = data_store.peek_in_queue(queue, start, count)
     if count == 1
       decode(results)
     else
@@ -354,7 +352,6 @@ module Resque
   def watch_queue(queue)
     data_store.watch_queue(queue)
   end
-
 
   #
   # job shortcuts
@@ -402,7 +399,7 @@ module Resque
       klass.send(hook, *args)
     end
 
-    return true
+    true
   end
 
   # This method can be used to conveniently remove a job from a queue.
@@ -472,15 +469,10 @@ module Resque
   def validate(klass, queue = nil)
     queue ||= queue_from_class(klass)
 
-    if !queue
-      raise NoQueueError.new("Jobs must be placed onto a queue. No queue could be inferred for class #{klass}")
-    end
+    raise NoQueueError, "Jobs must be placed onto a queue. No queue could be inferred for class #{klass}" unless queue
 
-    if klass.to_s.empty?
-      raise NoClassError.new("Jobs must be given a class.")
-    end
+    raise NoClassError, 'Jobs must be given a class.' if klass.to_s.empty?
   end
-
 
   #
   # worker shortcuts
@@ -508,15 +500,15 @@ module Resque
 
   # Returns a hash, similar to redis-rb's #info, of interesting stats.
   def info
-    return {
-      :pending   => queue_sizes.inject(0) { |sum, (_queue_name, queue_size)| sum + queue_size },
-      :processed => Stat[:processed],
-      :queues    => queues.size,
-      :workers   => workers.size.to_i,
-      :working   => threads_working.size,
-      :failed    => data_store.num_failed,
-      :servers   => [redis_id],
-      :environment  => ENV['RAILS_ENV'] || ENV['RACK_ENV'] || 'development'
+    {
+      pending: queue_sizes.inject(0) { |sum, (_queue_name, queue_size)| sum + queue_size },
+      processed: Stat[:processed],
+      queues: queues.size,
+      workers: workers.size.to_i,
+      working: threads_working.size,
+      failed: data_store.num_failed,
+      servers: [redis_id],
+      environment: ENV['RAILS_ENV'] || ENV['RACK_ENV'] || 'development'
     }
   end
 
@@ -559,8 +551,8 @@ module Resque
       end
 
       hash[queue_name] = {
-        :size => queue_size,
-        :samples => samples
+        size: queue_size,
+        samples: samples
       }
     end
 

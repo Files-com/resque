@@ -14,9 +14,7 @@ class Resque::ThreadSignal
 
   def wait_for_signal(timeout)
     @mutex.synchronize do
-      unless @signaled
-        @received.wait(@mutex, timeout)
-      end
+      @received.wait(@mutex, timeout) unless @signaled
 
       @signaled
     end

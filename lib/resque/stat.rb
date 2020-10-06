@@ -12,7 +12,7 @@ module Resque
     def redis
       Resque.redis
     end
-    alias :data_store :redis
+    alias data_store redis
 
     # Returns the int value of a stat, given a string stat name.
     def get(stat)
@@ -29,7 +29,7 @@ module Resque
     # Can optionally accept a second int parameter. The stat is then
     # incremented by that amount.
     def incr(stat, by = 1)
-      data_store.increment_stat(stat,by)
+      data_store.increment_stat(stat, by)
     end
 
     # Increments a stat by one.
@@ -42,7 +42,7 @@ module Resque
     # Can optionally accept a second int parameter. The stat is then
     # decremented by that amount.
     def decr(stat, by = 1)
-      data_store.decremet_stat(stat,by)
+      data_store.decremet_stat(stat, by)
     end
 
     # Decrements a stat by one.

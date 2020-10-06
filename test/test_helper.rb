@@ -11,7 +11,7 @@ $LOAD_PATH.unshift $dir + '/../lib'
 require 'resque'
 $TEST_PID = Process.pid
 
-ENV['JOBS_PER_FORK'] = "100"
+ENV['JOBS_PER_FORK'] = '100'
 
 begin
   require 'leftright'
@@ -22,12 +22,11 @@ end
 # make sure we can run redis
 #
 
-if !system("which redis-server")
+unless system('which redis-server')
   puts '', "** can't find `redis-server` in your path"
-  puts "** try running `sudo rake install`"
+  puts '** try running `sudo rake install`'
   abort ''
 end
-
 
 #
 # start our own redis when the tests start,
@@ -35,10 +34,10 @@ end
 
 def kill_test_redis
   processes = `ps -A -o pid,command | grep "[r]edis.*9736"`.split("\n")
-  pids = processes.map { |process| process.split(" ")[0] }
+  pids = processes.map { |process| process.split(' ')[0] }
   if pids.size > 0
-    puts "Killing test redis server..."
-    pids.each { |pid| Process.kill("KILL", pid.to_i) }
+    puts 'Killing test redis server...'
+    pids.each { |pid| Process.kill('KILL', pid.to_i) }
   end
   system("rm -f #{$dir}/dump.rdb #{$dir}/dump-cluster.rdb")
 end
@@ -59,10 +58,10 @@ class GlobalSpecHooks < MiniTest::Spec
 end
 
 kill_test_redis
-puts "Starting redis for testing at localhost:9736..."
+puts 'Starting redis for testing at localhost:9736...'
 `redis-server #{$dir}/redis-test.conf`
 
-create_redis = ->{ Redis.new(host: 'localhost', port: 9736, thread_safe: true) }
+create_redis = -> { Redis.new(host: 'localhost', port: 9736, thread_safe: true) }
 Resque.redis = ConnectionPool.wrap(size: 8, timeout: 5, &create_redis)
 
 ##
@@ -91,12 +90,12 @@ module AssertInWorkBlock
         begin
           block_called = true
           block.call(*bargs)
-        rescue MiniTest::Assertion => ex
-          throw :exception_in_block, ex
+        rescue MiniTest::Assertion => e
+          throw :exception_in_block, e
         end
       end
 
-      raise "assertion block not called!" unless block_called
+      raise 'assertion block not called!' unless block_called
 
       return retval
     end
@@ -119,14 +118,13 @@ Resque::Worker.include(WorkOneJob)
 #
 
 class SomeJob
-  def self.perform(repo_id, path)
-  end
+  def self.perform(repo_id, path); end
 end
 
 class JsonObject
-  def to_json(opts = {})
-    val = Resque.redis.get("count")
-    { "val" => val }.to_json
+  def to_json(_opts = {})
+    val = Resque.redis.get('count')
+    { 'val' => val }.to_json
   end
 end
 
@@ -142,16 +140,16 @@ end
 
 class BadJob
   def self.perform
-    raise "Bad job!"
+    raise 'Bad job!'
   end
 end
 
 class SlowJob
   def self.perform
-    puts "Rpushing..."
+    puts 'Rpushing...'
     Resque.redis.rpush('slowjob', 'started')
     sleep 100
-    raise "Bad job!"
+    raise 'Bad job!'
   end
 end
 
@@ -164,27 +162,27 @@ end
 class AtExitJob
   def self.perform(filename)
     at_exit do
-      File.open(filename, "w") {|file| file.puts "at_exit"}
+      File.open(filename, 'w') { |file| file.puts 'at_exit' }
     end
-    "at_exit job"
+    'at_exit job'
   end
 end
 
 class BadJobWithSyntaxError
   def self.perform
-    raise SyntaxError, "Extra Bad job!"
+    raise SyntaxError, 'Extra Bad job!'
   end
 end
 
 class BadJobWithOnFailureHookFail < BadJobWithSyntaxError
-  def self.on_failure_fail_hook(*args)
-    raise RuntimeError.new("This job is just so bad!")
+  def self.on_failure_fail_hook(*_args)
+    raise 'This job is just so bad!'
   end
 end
 
 class BadFailureBackend < Resque::Failure::Base
   def save
-    raise Exception.new("Failure backend error")
+    raise Exception, 'Failure backend error'
   end
 end
 
@@ -203,7 +201,7 @@ class Time
   class << self
     attr_accessor :fake_time
 
-    alias_method :now_without_mock_time, :now
+    alias now_without_mock_time now
 
     def now
       fake_time || now_without_mock_time
@@ -217,20 +215,24 @@ end
 def capture_io
   require 'stringio'
 
-  orig_stdout, orig_stderr         = $stdout, $stderr
-  captured_stdout, captured_stderr = StringIO.new, StringIO.new
-  $stdout, $stderr                 = captured_stdout, captured_stderr
+  orig_stdout = $stdout
+  orig_stderr = $stderr
+  captured_stdout = StringIO.new
+  captured_stderr = StringIO.new
+  $stdout = captured_stdout
+  $stderr = captured_stderr
 
   yield
 
-  return captured_stdout.string, captured_stderr.string
+  [captured_stdout.string, captured_stderr.string]
 ensure
   $stdout = orig_stdout
   $stderr = orig_stderr
 end
 
 def capture_io_with_pipe
-  orig_stdout, orig_stderr = $stdout, $stderr
+  orig_stdout = $stdout
+  orig_stderr = $stderr
   stdout_rd, $stdout = IO.pipe
   stderr_rd, $stderr = IO.pipe
 
@@ -238,7 +240,7 @@ def capture_io_with_pipe
 
   $stdout.close
   $stderr.close
-  return stdout_rd.read, stderr_rd.read
+  [stdout_rd.read, stderr_rd.read]
 ensure
   $stdout = orig_stdout
   $stderr = orig_stderr
@@ -246,12 +248,13 @@ end
 
 # Log to log/test.log
 def reset_logger
-  $test_logger ||= MonoLogger.new(File.open(File.expand_path("../../log/test.log", __FILE__), "w"))
+  $test_logger ||= MonoLogger.new(File.open(File.expand_path('../log/test.log', __dir__), 'w'))
   Resque.logger = $test_logger
 end
 
 def suppress_warnings
-  old_verbose, $VERBOSE = $VERBOSE, nil
+  old_verbose = $VERBOSE
+  $VERBOSE = nil
   yield
 ensure
   $VERBOSE = old_verbose
@@ -260,7 +263,7 @@ end
 def without_forking
   orig_dont_fork = ENV['DONT_FORK']
   begin
-    ENV['DONT_FORK'] = "1"
+    ENV['DONT_FORK'] = '1'
     yield
   ensure
     ENV['DONT_FORK'] = orig_dont_fork
@@ -268,15 +271,15 @@ def without_forking
 end
 
 def with_pidfile
-  old_pidfile = ENV["PIDFILE"]
+  old_pidfile = ENV['PIDFILE']
   begin
-    file = Tempfile.new("pidfile")
+    file = Tempfile.new('pidfile')
     file.close
-    ENV["PIDFILE"] = file.path
+    ENV['PIDFILE'] = file.path
     yield
   ensure
-    file.unlink if file
-    ENV["PIDFILE"] = old_pidfile
+    file&.unlink
+    ENV['PIDFILE'] = old_pidfile
   end
 end
 
@@ -289,11 +292,11 @@ ensure
 end
 
 def with_background
-  old_background = ENV["BACKGROUND"]
+  old_background = ENV['BACKGROUND']
   begin
-    ENV["BACKGROUND"] = "true"
+    ENV['BACKGROUND'] = 'true'
     yield
   ensure
-    ENV["BACKGROUND"] = old_background
+    ENV['BACKGROUND'] = old_background
   end
 end

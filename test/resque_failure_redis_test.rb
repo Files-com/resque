@@ -1,12 +1,12 @@
 require 'test_helper'
 require 'resque/failure/redis'
 
-describe "Resque::Failure::Redis" do
+describe 'Resque::Failure::Redis' do
   let(:bad_string) { [39, 52, 127, 86, 93, 95, 39].map { |c| c.chr }.join }
   let(:exception)  { StandardError.exception(bad_string) }
   let(:worker)     { Resque::Worker.new(:test) }
-  let(:queue)      { "queue" }
-  let(:payload)    { { "class" => Object, "args" => 3 } }
+  let(:queue)      { 'queue' }
+  let(:payload)    { { 'class' => Object, 'args' => 3 } }
 
   before do
     Resque::Failure::Redis.clear
@@ -21,8 +21,8 @@ describe "Resque::Failure::Redis" do
 
   it '.each iterates correctly (does nothing) for no failures' do
     assert_equal 0, Resque::Failure::Redis.count
-    Resque::Failure::Redis.each do |id, item|
-      raise "Should not get here"
+    Resque::Failure::Redis.each do |_id, _item|
+      raise 'Should not get here'
     end
   end
 
@@ -30,7 +30,7 @@ describe "Resque::Failure::Redis" do
     @redis_backend.save
     assert_equal 1, Resque::Failure::Redis.count
     num_iterations = 0
-    Resque::Failure::Redis.each do |id, item|
+    Resque::Failure::Redis.each do |_id, item|
       num_iterations += 1
       assert_equal Hash, item.class
     end
@@ -42,7 +42,7 @@ describe "Resque::Failure::Redis" do
     @redis_backend.save
     num_iterations = 0
     assert_equal 2, Resque::Failure::Redis.count
-    Resque::Failure::Redis.each do |id, item|
+    Resque::Failure::Redis.each do |_id, item|
       num_iterations += 1
       assert_equal Hash, item.class
     end
@@ -53,18 +53,17 @@ describe "Resque::Failure::Redis" do
     num_iterations = 0
     class_one = 'Foo'
     class_two = 'Bar'
-    [ class_one,
-      class_two,
-      class_one,
-      class_two,
-      class_one,
-      class_two
-    ].each do |class_name|
-      Resque::Failure::Redis.new(exception, worker, queue, payload.merge({ "class" => class_name })).save
+    [class_one,
+     class_two,
+     class_one,
+     class_two,
+     class_one,
+     class_two].each do |class_name|
+      Resque::Failure::Redis.new(exception, worker, queue, payload.merge({ 'class' => class_name })).save
     end
     # ensure that there are 6 failed jobs in total as configured
     assert_equal 6, Resque::Failure::Redis.count
-    Resque::Failure::Redis.each 0, 2, nil, class_one do |id, item|
+    Resque::Failure::Redis.each 0, 2, nil, class_one do |_id, item|
       num_iterations += 1
       # ensure it iterates only jobs with the specified class name (it was not
       # which cause we only got 1 job with class=Foo since it iterates all the
@@ -79,23 +78,21 @@ describe "Resque::Failure::Redis" do
     num_iterations = 0
     class_one = 'Foo'
     class_two = 'Bar'
-    [ class_one,
-      class_two,
-      class_one,
-      class_two,
-      class_one,
-      class_two
-    ].each do |class_name|
-      Resque::Failure::Redis.new(exception, worker, queue, payload.merge({ "class" => class_name })).save
+    [class_one,
+     class_two,
+     class_one,
+     class_two,
+     class_one,
+     class_two].each do |class_name|
+      Resque::Failure::Redis.new(exception, worker, queue, payload.merge({ 'class' => class_name })).save
     end
     # ensure that there are 6 failed jobs in total as configured
     assert_equal 6, Resque::Failure::Redis.count
-    Resque::Failure::Redis.each 0, 5 do |id, item|
+    Resque::Failure::Redis.each 0, 5 do |_id, item|
       num_iterations += 1
       assert_equal Hash, item.class
     end
     # ensure only iterates max up to the limit specified
     assert_equal 5, num_iterations
   end
-
 end

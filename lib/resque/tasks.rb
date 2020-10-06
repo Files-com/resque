@@ -1,18 +1,17 @@
 # require 'resque/tasks'
 # will give you the resque tasks
 
-
 namespace :resque do
   task :setup
 
-  desc "Start a Resque worker"
-  task :work => [ :preload, :setup ] do
+  desc 'Start a Resque worker'
+  task work: %i[preload setup] do
     require 'resque'
 
     begin
       worker = Resque::Worker.new
     rescue Resque::NoQueueError
-      abort "set QUEUE env var, e.g. $ QUEUE=critical,high rake resque:work"
+      abort 'set QUEUE env var, e.g. $ QUEUE=critical,high rake resque:work'
     end
 
     worker.prepare
@@ -21,7 +20,7 @@ namespace :resque do
   end
 
   # Preload app files if this is Rails
-  task :preload => :setup do
+  task preload: :setup do
     if defined?(Rails)
       if Rails::VERSION::MAJOR > 3 && Rails.application.config.eager_load
         ActiveSupport.run_load_hooks(:before_eager_load, Rails.application)
@@ -49,7 +48,7 @@ namespace :resque do
         data = Resque.encode(failure)
         Resque.redis.rpush(Resque::Failure.failure_queue_name(failure['queue']), data)
       end
-      warn "done!"
+      warn 'done!'
     end
   end
 end

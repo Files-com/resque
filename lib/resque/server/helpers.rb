@@ -1,10 +1,11 @@
 Resque::Server.helpers do
   def failed_date_format
-    "%Y/%m/%d %T %z"
+    '%Y/%m/%d %T %z'
   end
 
   def failed_multiple_queues?
     return @multiple_failed_queues if defined?(@multiple_failed_queues)
+
     @multiple_failed_queues = Resque::Failure.queues.size > 1
   end
 
@@ -14,9 +15,9 @@ Resque::Server.helpers do
 
   def failed_per_page
     @failed_per_page = if params[:class]
-      failed_size
-    else
-      20
+                         failed_size
+                       else
+                         20
     end
   end
 
@@ -28,7 +29,7 @@ Resque::Server.helpers do
     if failed_start_at + failed_per_page > failed_size
       failed_size
     else
-      failed_start_at  + failed_per_page - 1
+      failed_start_at + failed_per_page - 1
     end
   end
 
@@ -40,7 +41,7 @@ Resque::Server.helpers do
     classes = Hash.new(0)
     Resque::Failure.each(0, Resque::Failure.count(queue), queue) do |_, item|
       class_name = item['payload']['class'] if item['payload']
-      class_name ||= "nil"
+      class_name ||= 'nil'
       classes[class_name] += 1
     end
     classes

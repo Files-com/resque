@@ -1,12 +1,12 @@
 require 'test_helper'
 require 'resque/failure/redis_multi_queue'
 
-describe "Resque::Failure::RedisMultiQueue" do
+describe 'Resque::Failure::RedisMultiQueue' do
   let(:bad_string) { [39, 52, 127, 86, 93, 95, 39].map { |c| c.chr }.join }
   let(:exception)  { StandardError.exception(bad_string) }
   let(:worker)     { Resque::Worker.new(:test) }
   let(:queue)      { 'queue' }
-  let(:payload)    { { "class" => Object, "args" => 3 } }
+  let(:payload)    { { 'class' => Object, 'args' => 3 } }
 
   before do
     Resque::Failure::RedisMultiQueue.clear
@@ -21,8 +21,8 @@ describe "Resque::Failure::RedisMultiQueue" do
 
   it '.each iterates correctly (does nothing) for no failures' do
     assert_equal 0, Resque::Failure::RedisMultiQueue.count
-    Resque::Failure::RedisMultiQueue.each do |id, item|
-      raise "Should not get here"
+    Resque::Failure::RedisMultiQueue.each do |_id, _item|
+      raise 'Should not get here'
     end
   end
 
@@ -59,14 +59,13 @@ describe "Resque::Failure::RedisMultiQueue" do
     num_iterations = 0
     class_one = 'Foo'
     class_two = 'Bar'
-    [ class_one,
-      class_two,
-      class_one,
-      class_two,
-      class_one,
-      class_two
-    ].each do |class_name|
-      Resque::Failure::RedisMultiQueue.new(exception, worker, queue, payload.merge({ "class" => class_name })).save
+    [class_one,
+     class_two,
+     class_one,
+     class_two,
+     class_one,
+     class_two].each do |class_name|
+      Resque::Failure::RedisMultiQueue.new(exception, worker, queue, payload.merge({ 'class' => class_name })).save
     end
     # ensure that there are 6 failed jobs in total as configured
     count = Resque::Failure::RedisMultiQueue.count
@@ -87,20 +86,19 @@ describe "Resque::Failure::RedisMultiQueue" do
     num_iterations = 0
     class_one = 'Foo'
     class_two = 'Bar'
-    [ class_one,
-      class_two,
-      class_one,
-      class_two,
-      class_one,
-      class_two
-    ].each do |class_name|
-      Resque::Failure::RedisMultiQueue.new(exception, worker, queue, payload.merge({ "class" => class_name })).save
+    [class_one,
+     class_two,
+     class_one,
+     class_two,
+     class_one,
+     class_two].each do |class_name|
+      Resque::Failure::RedisMultiQueue.new(exception, worker, queue, payload.merge({ 'class' => class_name })).save
     end
     # ensure that there are 6 failed jobs in total as configured
     count = Resque::Failure::RedisMultiQueue.count
     queue = Resque::Failure.failure_queue_name('queue')
     assert_equal 6, count
-    Resque::Failure::RedisMultiQueue.each 0, 5, queue do |id, item|
+    Resque::Failure::RedisMultiQueue.each 0, 5, queue do |_id, item|
       num_iterations += 1
       assert_equal Hash, item.class
     end

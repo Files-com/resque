@@ -9,7 +9,7 @@ module Resque
   class DirtyExit < RuntimeError
     attr_reader :process_status
 
-    def initialize(message=nil, process_status=nil)
+    def initialize(message = nil, process_status = nil)
       @process_status = process_status
       super message
     end
@@ -17,5 +17,5 @@ module Resque
   class PruneDeadWorkerDirtyExit < DirtyExit; end
 
   # Raised when child process is TERM'd so job can rescue this to do shutdown work.
-  class TermException < SignalException; end
+  class TermException < RuntimeError; end
 end

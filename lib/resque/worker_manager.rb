@@ -5,10 +5,10 @@ module Resque
       attr_reader :host, :pid, :queues, :worker_count, :thread_count, :jobs_per_fork, :worker_pid, :worker_pid, :worker_pid, :worker_pid
 
       def initialize(worker_id, worker_pid = nil)
-        @worker_id = worker_id.gsub(/worker:/, "")
+        @worker_id = worker_id.gsub(/worker:/, '')
         @host, @pid, queues_raw, @worker_count, @thread_count, @jobs_per_fork = @worker_id.split(':')
         @worker_pid = worker_pid
-        @queues = queues_raw.gsub("~", ":").split(',')
+        @queues = queues_raw.gsub('~', ':').split(',')
       end
 
       def to_s
@@ -24,22 +24,22 @@ module Resque
       end
 
       def jobs_running
-        threads_working.map { |thread| [ thread, thread.job ] }
+        threads_working.map { |thread| [thread, thread.job] }
       end
 
       def threads
-        data_store.worker_threads_map([ @worker_id ]).map { |key,value|
+        data_store.worker_threads_map([@worker_id]).map do |key, value|
           value ? WorkerThreadStatus.new(key, value) : nil
-        }.compact
+        end.compact
       end
 
       def threads_working
-        data_store.worker_threads_map([ self ]).map { |key,value|
+        data_store.worker_threads_map([self]).map do |key, value|
           value ? WorkerThreadStatus.new(key, value) : nil
-        }.compact
+        end.compact
       end
 
-      def unregister_worker(exception = nil)
+      def unregister_worker(_exception = nil)
         data_store.unregister_worker(self) do
           Stat.clear("processed:#{self}")
           Stat.clear("failed:#{self}")
@@ -51,9 +51,9 @@ module Resque
       attr_reader :worker, :job, :thread_id
 
       def initialize(worker_thread_id, job = nil)
-        @worker_thread_id = worker_thread_id.gsub(/worker:/, "")
+        @worker_thread_id = worker_thread_id.gsub(/worker:/, '')
         @host, @pid, queues_raw, @worker_count, @thread_count, @jobs_per_fork, @worker_pid, @thread_id = @worker_thread_id.split(':')
-        @queues = queues_raw.gsub("~", ":").split(',')
+        @queues = queues_raw.gsub('~', ':').split(',')
         @job = Resque.decode(job) if job
         worker_id = Resque::WorkerManager.worker_id_from_thread_id(@worker_thread_id)
         @worker = WorkerStatus.new(worker_id, @worker_pid)
@@ -89,7 +89,7 @@ module Resque
       heartbeats = all_heartbeats
       now = data_store.server_time
 
-      workers.select { |worker|
+      workers.select do |worker|
         id = worker.to_s
         heartbeat = heartbeats[id]
 
@@ -99,7 +99,7 @@ module Resque
         else
           false
         end
-      }
+      end
     end
 
     def self.abandoned_heartbeats
@@ -116,27 +116,20 @@ module Resque
     end
 
     def self.find(worker_id)
-      if exists?(worker_id)
-        WorkerStatus.new(worker_id)
-      else
-        nil
-      end
+      WorkerStatus.new(worker_id) if exists?(worker_id)
     end
 
     def self.find_thread(thread_id)
-      if exists?(worker_id_from_thread_id(thread_id))
-        WorkerThreadStatus.new(thread_id)
-      else
-        nil
-      end
+      WorkerThreadStatus.new(thread_id) if exists?(worker_id_from_thread_id(thread_id))
     end
 
     def self.jobs_running
-      threads_working.map { |thread| [ thread, thread.job ] }
+      threads_working.map { |thread| [thread, thread.job] }
     end
 
     def self.prune_dead_workers
       return unless data_store.acquire_pruning_dead_worker_lock(self, Resque.heartbeat_interval)
+
       (all_workers_with_expired_heartbeats + abandoned_heartbeats).each do |worker|
         Logging.log :info, "Pruning dead worker: #{worker}"
         worker.unregister_worker(PruneDeadWorkerDirtyExit.new(worker.to_s))
@@ -144,16 +137,16 @@ module Resque
     end
 
     def self.worker_id_from_thread_id(worker_thread_id)
-      worker_thread_id.split(':')[0..-3].join(":")
+      worker_thread_id.split(':')[0..-3].join(':')
     end
 
     def self.threads_working
       workers = all
       return [] unless workers.any?
 
-      data_store.worker_threads_map(workers).map { |key,value|
+      data_store.worker_threads_map(workers).map do |key, value|
         value ? WorkerThreadStatus.new(key, value) : nil
-      }.compact
+      end.compact
     end
 
     def self.working

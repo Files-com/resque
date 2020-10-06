@@ -1,8 +1,7 @@
 require 'test_helper'
 require 'tmpdir'
 
-describe "Resque::Worker" do
-
+describe 'Resque::Worker' do
   class LongRunningJob
     @queue = :long_running_job
 
@@ -34,20 +33,20 @@ describe "Resque::Worker" do
     start_status = Resque.redis.blpop('long-test:start', 5)
     refute_nil start_status
     child_pid = start_status[1].to_i
-    assert child_pid > 0, "worker child process not created"
+    assert child_pid > 0, 'worker child process not created'
 
     [worker_pid, child_pid]
   end
 
   def assert_child_not_running(child_pid)
-    assert (`ps -p #{child_pid.to_s} -o pid=`).empty?
+    assert `ps -p #{child_pid} -o pid=`.empty?
   end
 
   before do
     Resque.heartbeat_interval = 0.1 # make interval nice and fast for tests
   end
 
-  it "kills off the child when killed" do
+  it 'kills off the child when killed' do
     worker_pid, child_pid = start_worker
     assert worker_pid != child_pid
     Process.kill('TERM', worker_pid)
@@ -60,7 +59,7 @@ describe "Resque::Worker" do
     assert_equal('Job was killed', Resque::Failure.all['error'])
   end
 
-  it "kills workers via the remote kill mechanism" do
+  it 'kills workers via the remote kill mechanism' do
     _worker_pid, _child_pid = start_worker
     thread = Resque::WorkerManager.threads_working.first
     thread.kill
@@ -72,7 +71,7 @@ describe "Resque::Worker" do
     assert_equal('Job was killed', Resque::Failure.all['error'])
   end
 
-  it "runs if not killed" do
+  it 'runs if not killed' do
     _worker_pid, _child_pid = start_worker
 
     result = Resque.redis.blpop('long-test:result')

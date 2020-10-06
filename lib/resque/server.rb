@@ -10,6 +10,7 @@ Encoding.default_external = Encoding::UTF_8 if defined?(Encoding) && Encoding.de
 module Resque
   class Server < Sinatra::Base
     require 'resque/server/helpers'
+    require 'resque/server/long_job_helpers'
 
     dir = File.dirname(File.expand_path(__FILE__))
 

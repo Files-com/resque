@@ -10,17 +10,19 @@
   <table class='jobs'>
     <tr>
       <th>Class</th>
+      <th>Site</th>
       <th>Args</th>
     </tr>
     <% for job in (jobs = resque.peek(current_queue, start, 20)) %>
     <tr>
       <td class='class'><%= partial :job_class, :job => job %></td>
-      <td class='args'><%=h job['args'].inspect %></td>
+      <td class='site'><%=h long_job_site_id(job.fetch('args', nil)).inspect %></td>
+      <td class='args'><%=h smart_args(job.fetch('args', nil)).inspect %></td>
     </tr>
     <% end %>
     <% if jobs.empty? %>
     <tr>
-      <td class='no-data' colspan='2'>There are no pending jobs in this queue</td>
+      <td class='no-data' colspan='3'>There are no pending jobs in this queue</td>
     </tr>
     <% end %>
   </table>

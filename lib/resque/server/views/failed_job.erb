@@ -30,8 +30,10 @@
         <code>nil</code>
       <% end %>
     </dd>
+    <dt>Site</dt>
+    <dd><pre><%=h long_job_site_id(job.fetch('payload', {}).fetch('args', nil)) || "nil" %></pre></dd>    
     <dt>Arguments</dt>
-    <dd><pre><%=h job['payload'] ? show_args(job['payload']['args']) : 'nil' %></pre></dd>
+    <dd><pre><%=h job['payload'] ? show_args(smart_args(job.fetch('payload', {}).fetch('args', nil))) : 'nil' %></pre></dd>
     <dt>Exception</dt>
     <dd><code><%= job['exception'] %></code></dd>
     <dt>Error</dt>

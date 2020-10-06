@@ -7,10 +7,12 @@
     <th>Where</th>
     <th>Queue</th>
     <th>Processing</th>
+    <th>Site</th>
+    <th>Args</th>
   </tr>
   <% if jobs_running.empty? %>
   <tr>
-    <td colspan="3" class='no-data'>Nothing is happening right now...</td>
+    <td colspan="5" class='no-data'>Nothing is happening right now...</td>
   </tr>
   <% end %>
 
@@ -23,6 +25,12 @@
       </td>
       <td class='process'>
         <%= partial :processing, :thread => thread, :job => job %>
+      </td>
+      <td class='site'>
+        <%=h long_job_site_id(job.fetch('payload', {}).fetch('args', nil)) %>
+      </td>      
+      <td class='args'>
+        <%=h smart_args(job.fetch('payload', {}).fetch('args', nil)) %>
       </td>
     </tr>
   <% end %>

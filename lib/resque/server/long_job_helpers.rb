@@ -13,18 +13,18 @@ Resque::Server.helpers do
   def get_long_job(args)
     uuid = args[0]
 
-    LongJobRun.where(uuid: uuid).first
+    LongJobRun.get_by_uuid(uuid).first
   end
 
   def smart_args(args)
     return args unless long_job?(args)
 
-    get_long_job(args).args
+    get_long_job(args)&.args
   end
 
   def long_job_site_id(args)
     return nil unless long_job?(args)
 
-    get_long_job(args).site_id
+    get_long_job(args)&.site_id
   end
 end

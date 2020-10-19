@@ -13,11 +13,11 @@
       <th>Site</th>
       <th>Args</th>
     </tr>
-    <% for job in (jobs = resque.peek(current_queue, start, 20)) %>
+    <% for job in add_long_job_to_resque_peek(jobs = resque.peek(current_queue, start, 20)) %>
     <tr>
       <td class='class'><%= partial :job_class, :job => job %></td>
-      <td class='site'><%=h long_job_site_id(job.fetch('args', nil)).inspect %></td>
-      <td class='args'><%=h smart_args(job.fetch('args', nil)).inspect %></td>
+      <td class='site'><%=h job["long_job"]&.site_id%></td>
+      <td class='args'><%=h job["long_job"] ? job["long_job"].args : job['args'] %></td>
     </tr>
     <% end %>
     <% if jobs.empty? %>

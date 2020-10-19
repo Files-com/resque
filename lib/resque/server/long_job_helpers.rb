@@ -10,6 +10,12 @@ Resque::Server.helpers do
     UUID.validate(args[0])
   end
 
+  def get_uuid(args)
+    return unless long_job?(args)
+
+    args[0]
+  end
+
   def get_long_job(args)
     uuid = args[0]
 
@@ -26,5 +32,25 @@ Resque::Server.helpers do
     return nil unless long_job?(args)
 
     get_long_job(args)&.site_id
+  end
+
+  def add_long_job_to_jobs_running(jobs_running)
+    uuids = jobs_running.map { |_thread, job| get_uuid(job.dig('payload', 'args')) }.compact
+    long_jobs = LongJobRun.get_by_uuid(uuids).to_a
+    jobs_running.each do |_thread, job|
+      job['long_job'] = long_jobs.find { |lj| lj[:uuid] == get_uuid(job.dig('payload', 'args')) }
+    end
+
+    jobs_running
+  end
+
+  def add_long_job_to_resque_peek(jobs)
+    uuids = jobs.map { |job| get_uuid(job.dig('args')) }.compact
+    long_jobs = LongJobRun.get_by_uuid(uuids).to_a
+    jobs.each do |job|
+      job['long_job'] = long_jobs.find { |lj| lj[:uuid] == get_uuid(job.dig('args')) }
+    end
+
+    jobs
   end
 end

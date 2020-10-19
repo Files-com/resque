@@ -16,7 +16,7 @@
   </tr>
   <% end %>
 
-  <% jobs_running.sort_by { |_w, j| j['run_at'] ? j['run_at'].to_s() : '' }.each do |thread, job| %>
+  <% add_long_job_to_jobs_running(jobs_running).sort_by { |_w, j| j['run_at'] ? j['run_at'].to_s : '' }.each do |thread, job| %>
     <tr>
       <% host, pid, _queues = thread.worker.to_s.split(':') %>
       <td class='where'><a href="<%=u "/workers/#{thread.worker}" %>"><%= host %>:<%= pid %></a></td>
@@ -27,10 +27,10 @@
         <%= partial :processing, :thread => thread, :job => job %>
       </td>
       <td class='site'>
-        <%=h long_job_site_id(job.fetch('payload', {}).fetch('args', nil)) %>
+        <%=h job["long_job"]&.site_id %>
       </td>      
       <td class='args'>
-        <%=h smart_args(job.fetch('payload', {}).fetch('args', nil)) %>
+        <%=h job["long_job"] ? job["long_job"].args : job['payload']['args']  %>
       </td>
     </tr>
   <% end %>

@@ -55,10 +55,12 @@ module Resque
                    :stat
 
     # Compatibility with any non-Resque classes that were using Resque.redis as a way to access Redis
+    # rubocop:disable Lint/RedundantCopDisableDirective, Style/MethodMissingSuper
     def method_missing(sym, *args, &block)
       # TODO: deprecation warning?
       @redis.send(sym, *args, &block)
     end
+    # rubocop:enable Lint/RedundantCopDisableDirective, Style/MethodMissingSuper
 
     # make use respond like redis
     def respond_to?(method, include_all = false)

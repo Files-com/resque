@@ -1,6 +1,6 @@
 Resque::Server.helpers do
   def long_job_enabled?
-    Object.const_defined?(:LongJob)
+    Object.const_defined?(:LongJob) && LongJobRun.respond_to?(:get_for_resque_status)
   end
 
   def long_job?(args)
@@ -19,7 +19,7 @@ Resque::Server.helpers do
   def get_long_job(args)
     uuid = args[0]
 
-    LongJobRun.select(:args, :site_id, :uuid).get_by_uuid(uuid).first
+    LongJobRun.get_for_resque_status(uuid).first
   end
 
   def smart_args(args)
@@ -38,7 +38,7 @@ Resque::Server.helpers do
     return jobs_running unless long_job_enabled?
 
     uuids = jobs_running.map { |_thread, job| get_uuid(job.dig('payload', 'args')) }.compact
-    long_jobs = LongJobRun.select(:args, :site_id, :uuid).get_by_uuid(uuids).to_a
+    long_jobs = LongJobRun.get_for_resque_status(uuids).to_a
     jobs_running.each do |_thread, job|
       job['long_job'] = long_jobs.find { |lj| lj[:uuid] == get_uuid(job.dig('payload', 'args')) }
     end
@@ -50,7 +50,7 @@ Resque::Server.helpers do
     return jobs unless long_job_enabled?
 
     uuids = jobs.map { |job| get_uuid(job.dig('args')) }.compact
-    long_jobs = LongJobRun.select(:args, :site_id, :uuid).get_by_uuid(uuids).to_a
+    long_jobs = LongJobRun.get_for_resque_status(uuids).to_a
     jobs.each do |job|
       job['long_job'] = long_jobs.find { |lj| lj[:uuid] == get_uuid(job.dig('args')) }
     end

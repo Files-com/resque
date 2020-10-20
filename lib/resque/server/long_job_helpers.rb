@@ -19,7 +19,7 @@ Resque::Server.helpers do
   def get_long_job(args)
     uuid = args[0]
 
-    LongJobRun.get_by_uuid(uuid).first
+    LongJobRun.select(:args, :site_id, :uuid).get_by_uuid(uuid).first
   end
 
   def smart_args(args)
@@ -35,8 +35,10 @@ Resque::Server.helpers do
   end
 
   def add_long_job_to_jobs_running(jobs_running)
+    return jobs_running unless long_job_enabled?
+
     uuids = jobs_running.map { |_thread, job| get_uuid(job.dig('payload', 'args')) }.compact
-    long_jobs = LongJobRun.get_by_uuid(uuids).to_a
+    long_jobs = LongJobRun.select(:args, :site_id, :uuid).get_by_uuid(uuids).to_a
     jobs_running.each do |_thread, job|
       job['long_job'] = long_jobs.find { |lj| lj[:uuid] == get_uuid(job.dig('payload', 'args')) }
     end
@@ -45,8 +47,10 @@ Resque::Server.helpers do
   end
 
   def add_long_job_to_resque_peek(jobs)
+    return jobs unless long_job_enabled?
+
     uuids = jobs.map { |job| get_uuid(job.dig('args')) }.compact
-    long_jobs = LongJobRun.get_by_uuid(uuids).to_a
+    long_jobs = LongJobRun.select(:args, :site_id, :uuid).get_by_uuid(uuids).to_a
     jobs.each do |job|
       job['long_job'] = long_jobs.find { |lj| lj[:uuid] == get_uuid(job.dig('args')) }
     end

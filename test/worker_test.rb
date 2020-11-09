@@ -37,6 +37,12 @@ describe 'Resque::Worker' do
     assert_equal 1, Resque::Failure.count
   end
 
+  it 'can fail jobs and skip the failed queue' do
+    Resque::Job.create(:jobs, BadJobSkipFailedQueue)
+    @worker.work(0)
+    assert_equal 0, Resque::Failure.count
+  end
+
   it 'failed jobs report exception and message' do
     Resque::Job.create(:jobs, BadJobWithSyntaxError)
     @worker.work(0)

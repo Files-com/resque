@@ -144,6 +144,10 @@ class BadJob
   end
 end
 
+class BadJobSkipFailedQueue < BadJob
+  @skip_failed_queue = true
+end
+
 class SlowJob
   def self.perform
     puts 'Rpushing...'

@@ -78,6 +78,8 @@ Metrics/AbcSize:
 # ExcludedMethods: refine
 Metrics/BlockLength:
   Max: 535
+  Exclude:
+    - "test/worker_test.rb"
 
 # Offense count: 1
 # Configuration parameters: CountBlocks.

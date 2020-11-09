@@ -75,6 +75,9 @@ module Resque
     # This job's associated payload object.
     attr_reader :payload
 
+    # Do not add failed jobs to the failed queue
+    attr_reader :skip_failed_queue
+
     def initialize(queue, payload)
       @queue = queue
       @payload = payload
@@ -260,11 +263,14 @@ module Resque
     rescue Exception => e
       raise e
     ensure
-      Failure.create \
-        payload: payload,
-        exception: exception,
-        worker: worker,
-        queue: queue
+      unless skip_failed_queue
+        Failure.create(
+          payload: payload,
+          exception: exception,
+          worker: worker,
+          queue: queue
+        )
+      end
     end
 
     # Creates an identical job, essentially placing this job back on

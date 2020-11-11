@@ -51,6 +51,13 @@ module Resque
       Resque.decode(object)
     end
 
+    # Configure job to not add failed jobs to the failed queue
+    def self.skip_failed_queue(val = nil)
+      @skip_failed_queue = val unless val.nil?
+
+      @skip_failed_queue
+    end
+
     # Given a word with dashes, returns a camel cased version of it.
     def classify(dashed_word)
       Resque.classify(dashed_word)
@@ -74,9 +81,6 @@ module Resque
 
     # This job's associated payload object.
     attr_reader :payload
-
-    # Do not add failed jobs to the failed queue
-    attr_reader :skip_failed_queue
 
     def initialize(queue, payload)
       @queue = queue
@@ -263,7 +267,7 @@ module Resque
     rescue Exception => e
       raise e
     ensure
-      unless skip_failed_queue
+      unless skip_failed_queue?
         Failure.create(
           payload: payload,
           exception: exception,
@@ -283,6 +287,10 @@ module Resque
     def inspect
       obj = @payload
       format('(Job{%s} | %s | %s)', @queue, obj['class'], obj['args'].inspect)
+    end
+
+    def skip_failed_queue?
+      self.class.skip_failed_queue == true
     end
 
     # Equality

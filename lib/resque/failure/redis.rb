@@ -5,8 +5,7 @@ module Resque
     class Redis < Base
       class << self
         attr_writer :expire_generation
-        attr_accessor :expire_block
-        attr_accessor :failure_block
+        attr_accessor :expire_block, :failure_block
       end
 
       def data_store
@@ -63,7 +62,7 @@ module Resque
           original_limit = limit
           limit = count
         end
-        all_items = limit == 1 ? [all(offset, limit, queue)] : Array(all(offset, limit, queue))
+        all_items = limit == 1 ? [ all(offset, limit, queue) ] : Array(all(offset, limit, queue))
         reversed = false
         if order.eql? 'desc'
           all_items.reverse!
@@ -129,7 +128,7 @@ module Resque
       def self.requeue_all
         while (fdata = Resque.redis.lpop(:failed))
           begin
-            data = JSON.load(fdata)
+            data = JSON.parse(fdata)
             qdata = JSON.dump(data['payload'])
             queue = data['queue']
             Resque.redis.rpush("queue:#{queue}", qdata)

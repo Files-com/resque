@@ -60,8 +60,8 @@ describe 'rake tasks' do
     Rake.application.invoke_task(name)
   end
 
-  def assert_system_exit(expected_message)
-    capture_io { yield }
+  def assert_system_exit(expected_message, &block)
+    capture_io(&block)
     raise 'Expected task to abort'
   rescue Exception => e
     assert_equal e.message, expected_message

@@ -5,11 +5,11 @@ module Resque
     HEARTBEAT_KEY = 'workers:heartbeat'.freeze
 
     def initialize(redis)
-      @redis                = redis
-      @queue_access         = QueueAccess.new(@redis)
-      @failed_queue_access  = FailedQueueAccess.new(@redis)
-      @workers              = Workers.new(@redis)
-      @stats_access         = StatsAccess.new(@redis)
+      @redis = redis
+      @queue_access = QueueAccess.new(@redis)
+      @failed_queue_access = FailedQueueAccess.new(@redis)
+      @workers = Workers.new(@redis)
+      @stats_access = StatsAccess.new(@redis)
     end
 
     def_delegators :@queue_access, :push_to_queue,
@@ -63,7 +63,7 @@ module Resque
     # rubocop:enable Lint/RedundantCopDisableDirective, Style/MethodMissingSuper
 
     # make use respond like redis
-    def respond_to?(method, include_all = false)
+    def respond_to_missing?(method, include_all = false)
       @redis.respond_to?(method, include_all) || super
     end
 
@@ -176,7 +176,7 @@ module Resque
 
       def failed_queue_names(find_queue_names_in_key = nil)
         if find_queue_names_in_key.nil?
-          [:failed]
+          [ :failed ]
         else
           Array(@redis.smembers(find_queue_names_in_key))
         end
@@ -198,7 +198,7 @@ module Resque
         failed_queue_name ||= :failed
         hopefully_unique_value_we_can_use_to_delete_job = ''
         @redis.lset(failed_queue_name, index_in_failed_queue, hopefully_unique_value_we_can_use_to_delete_job)
-        @redis.lrem(failed_queue_name, 1,                     hopefully_unique_value_we_can_use_to_delete_job)
+        @redis.lrem(failed_queue_name, 1, hopefully_unique_value_we_can_use_to_delete_job)
       end
     end
 
@@ -245,7 +245,7 @@ module Resque
       def unregister_worker(worker, &block)
         while id = @redis.spop(redis_key_for_worker_threads(worker))
           @redis.del(redis_key_for_worker_thread(id))
-          @redis.del(redis_key_for_worker_thread(id).to_s.split(':')[0..-2].join(':') + ':kills')
+          @redis.del("#{redis_key_for_worker_thread(id).to_s.split(':')[0..-2].join(':')}:kills")
         end
         @redis.pipelined do
           @redis.srem(:workers, worker)

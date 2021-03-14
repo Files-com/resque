@@ -35,7 +35,7 @@ describe 'Resque::Job before_perform' do
     assert_raises StandardError do
       perform_job(BeforePerformJobFails, history)
     end
-    assert_equal history, [:before_perform], 'Only before_perform was run'
+    assert_equal history, [ :before_perform ], 'Only before_perform was run'
   end
 
   class ::BeforePerformJobAborts
@@ -52,7 +52,7 @@ describe 'Resque::Job before_perform' do
   it 'does not perform if before_perform raises Resque::Job::DontPerform' do
     result = perform_job(BeforePerformJobAborts, history = [])
     assert_equal false, result, 'perform returned false'
-    assert_equal history, [:before_perform], 'Only before_perform was run'
+    assert_equal history, [ :before_perform ], 'Only before_perform was run'
   end
 end
 
@@ -134,7 +134,7 @@ describe 'Resque::Job around_perform' do
     assert_raises StandardError do
       perform_job(AroundPerformJobFailsBeforePerforming, history)
     end
-    assert_equal history, [:start_around_perform], 'Only part of around_perform was run'
+    assert_equal history, [ :start_around_perform ], 'Only part of around_perform was run'
   end
 
   class ::AroundPerformJobFailsWhilePerforming
@@ -197,7 +197,7 @@ describe 'Resque::Job on_failure' do
   it 'it does not call on_failure if no failures occur' do
     result = perform_job(FailureJobThatDoesNotFail, history = [])
     assert_equal true, result, 'perform returned true'
-    assert_equal history, [:perform]
+    assert_equal history, [ :perform ]
   end
 
   class ::FailureJobThatFails
@@ -216,7 +216,7 @@ describe 'Resque::Job on_failure' do
     assert_raises StandardError do
       perform_job(FailureJobThatFails, history)
     end
-    assert_equal history, [:perform, 'oh no']
+    assert_equal history, [ :perform, 'oh no' ]
   end
 
   class ::FailureJobThatFailsBadly
@@ -235,7 +235,7 @@ describe 'Resque::Job on_failure' do
     assert_raises SyntaxError do
       perform_job(FailureJobThatFailsBadly, history)
     end
-    assert_equal history, [:perform, 'oh no']
+    assert_equal history, [ :perform, 'oh no' ]
   end
 
   it 'throws errors with helpful messages if failure occurs during on_failure hooks' do
@@ -266,7 +266,7 @@ describe 'Resque::Job after_enqueue' do
     @worker = Resque::Worker.new(:jobs)
     Resque.enqueue(AfterEnqueueJob, history)
     @worker.work(0)
-    assert_equal history, [:after_enqueue], 'after_enqueue was not run'
+    assert_equal history, [ :after_enqueue ], 'after_enqueue was not run'
   end
 end
 
@@ -296,7 +296,7 @@ describe 'Resque::Job before_enqueue' do
     @worker = Resque::Worker.new(:jobs)
     assert Resque.enqueue(BeforeEnqueueJob, history)
     @worker.work(0)
-    assert_equal history, [:before_enqueue], 'before_enqueue was not run'
+    assert_equal history, [ :before_enqueue ], 'before_enqueue was not run'
   end
 
   it 'a before enqueue hook that returns false should prevent the job from getting queued' do
@@ -325,7 +325,7 @@ describe 'Resque::Job after_dequeue' do
     @worker = Resque::Worker.new(:jobs)
     Resque.dequeue(AfterDequeueJob, history)
     @worker.work(0)
-    assert_equal history, [:after_dequeue], 'after_dequeue was not run'
+    assert_equal history, [ :after_dequeue ], 'after_dequeue was not run'
   end
 end
 
@@ -355,7 +355,7 @@ describe 'Resque::Job before_dequeue' do
     @worker = Resque::Worker.new(:jobs)
     Resque.dequeue(BeforeDequeueJob, history)
     @worker.work(0)
-    assert_equal history, [:before_dequeue], 'before_dequeue was not run'
+    assert_equal history, [ :before_dequeue ], 'before_dequeue was not run'
   end
 
   it 'a before dequeue hook that returns false should prevent the job from getting dequeued' do
@@ -472,15 +472,13 @@ describe 'Resque::Job all hooks' do
   end
 
   it 'it runs callbacks when inline is true' do
-    begin
-      Resque.inline = true
-      # Sending down two parameters that can be passed and updated by reference
-      result = Resque.enqueue(CallbacksInline, [], { 'count' => 0 })
-      assert_equal true, result, 'perform returned true'
-      assert_equal $history, %i[before_perform start_around_perform perform finish_around_perform after_perform]
-      assert_equal 4, $count['count']
-    ensure
-      Resque.inline = false
-    end
+    Resque.inline = true
+    # Sending down two parameters that can be passed and updated by reference
+    result = Resque.enqueue(CallbacksInline, [], { 'count' => 0 })
+    assert_equal true, result, 'perform returned true'
+    assert_equal $history, %i[before_perform start_around_perform perform finish_around_perform after_perform]
+    assert_equal 4, $count['count']
+  ensure
+    Resque.inline = false
   end
 end

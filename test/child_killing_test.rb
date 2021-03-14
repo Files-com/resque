@@ -35,7 +35,7 @@ describe 'Resque::Worker' do
     child_pid = start_status[1].to_i
     assert child_pid > 0, 'worker child process not created'
 
-    [worker_pid, child_pid]
+    [ worker_pid, child_pid ]
   end
 
   def assert_child_not_running(child_pid)
@@ -75,6 +75,6 @@ describe 'Resque::Worker' do
     _worker_pid, _child_pid = start_worker
 
     result = Resque.redis.blpop('long-test:result')
-    assert 'Finished Normally' == result.last
+    assert result.last == 'Finished Normally'
   end
 end

@@ -14,6 +14,7 @@ module Resque
       super message
     end
   end
+
   class PruneDeadWorkerDirtyExit < DirtyExit; end
 
   # Raised when child process is TERM'd so job can rescue this to do shutdown work.

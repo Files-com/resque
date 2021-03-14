@@ -20,7 +20,7 @@ describe 'Resque::WorkerManager' do
 
     assert_equal 2, Resque.workers.size
     assert Resque::WorkerManager.all_heartbeats.key?(workerB.to_s)
-    assert_equal [workerA], Resque::WorkerManager.all_workers_with_expired_heartbeats
+    assert_equal [ workerA ], Resque::WorkerManager.all_workers_with_expired_heartbeats
 
     Resque::WorkerManager.prune_dead_workers
 
@@ -37,7 +37,7 @@ describe 'Resque::WorkerManager' do
     workerA.register_worker
     workerA.heartbeat!(now - Resque.prune_interval - 1)
     assert_equal 1, Resque.workers.size
-    assert_equal [workerA], Resque::WorkerManager.all_workers_with_expired_heartbeats
+    assert_equal [ workerA ], Resque::WorkerManager.all_workers_with_expired_heartbeats
 
     workerB = Resque::Worker.new(:jobs)
     workerB.to_s = 'workerB:1:jobs'
@@ -53,7 +53,7 @@ describe 'Resque::WorkerManager' do
     workerC.register_worker
     workerC.heartbeat!(now - Resque.prune_interval - 1)
     assert_equal 2, Resque.workers.size
-    assert_equal [workerC], Resque::WorkerManager.all_workers_with_expired_heartbeats
+    assert_equal [ workerC ], Resque::WorkerManager.all_workers_with_expired_heartbeats
 
     workerD = Resque::Worker.new(:jobs)
     workerD.to_s = 'workerD:1:jobs'
@@ -63,7 +63,7 @@ describe 'Resque::WorkerManager' do
 
     # workerC does not get pruned because workerB already pruned recently
     Resque::WorkerManager.prune_dead_workers
-    assert_equal [workerC], Resque::WorkerManager.all_workers_with_expired_heartbeats
+    assert_equal [ workerC ], Resque::WorkerManager.all_workers_with_expired_heartbeats
   end
 
   it "does not prune workers that haven't set a heartbeat" do
@@ -152,7 +152,7 @@ describe 'Resque::WorkerManager' do
 
   describe '.worker_id_from_thread_id' do
     it 'works' do
-      worker_id = "#{`hostname`.chomp}:#{$$}:jobs:1:1:100"
+      worker_id = "#{`hostname`.chomp}:#{$PROCESS_ID}:jobs:1:1:100"
       assert_equal Resque::WorkerManager.worker_id_from_thread_id("#{worker_id}:1:1"), worker_id
     end
   end

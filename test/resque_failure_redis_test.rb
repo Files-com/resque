@@ -2,11 +2,11 @@ require 'test_helper'
 require 'resque/failure/redis'
 
 describe 'Resque::Failure::Redis' do
-  let(:bad_string) { [39, 52, 127, 86, 93, 95, 39].map { |c| c.chr }.join }
-  let(:exception)  { StandardError.exception(bad_string) }
-  let(:worker)     { Resque::Worker.new(:test) }
-  let(:queue)      { 'queue' }
-  let(:payload)    { { 'class' => Object, 'args' => 3 } }
+  let(:bad_string) { [ 39, 52, 127, 86, 93, 95, 39 ].map(&:chr).join }
+  let(:exception) { StandardError.exception(bad_string) }
+  let(:worker) { Resque::Worker.new(:test) }
+  let(:queue) { 'queue' }
+  let(:payload) { { 'class' => Object, 'args' => 3 } }
 
   before do
     Resque::Failure::Redis.clear
@@ -53,12 +53,12 @@ describe 'Resque::Failure::Redis' do
     num_iterations = 0
     class_one = 'Foo'
     class_two = 'Bar'
-    [class_one,
-     class_two,
-     class_one,
-     class_two,
-     class_one,
-     class_two].each do |class_name|
+    [ class_one,
+      class_two,
+      class_one,
+      class_two,
+      class_one,
+      class_two ].each do |class_name|
       Resque::Failure::Redis.new(exception, worker, queue, payload.merge({ 'class' => class_name })).save
     end
     # ensure that there are 6 failed jobs in total as configured
@@ -78,12 +78,12 @@ describe 'Resque::Failure::Redis' do
     num_iterations = 0
     class_one = 'Foo'
     class_two = 'Bar'
-    [class_one,
-     class_two,
-     class_one,
-     class_two,
-     class_one,
-     class_two].each do |class_name|
+    [ class_one,
+      class_two,
+      class_one,
+      class_two,
+      class_one,
+      class_two ].each do |class_name|
       Resque::Failure::Redis.new(exception, worker, queue, payload.merge({ 'class' => class_name })).save
     end
     # ensure that there are 6 failed jobs in total as configured

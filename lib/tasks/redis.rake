@@ -8,19 +8,19 @@ class RedisRunner
     @redis_dir ||= if ENV['PREFIX']
                      Pathname.new(ENV['PREFIX'])
                    else
-                     Pathname.new(`which redis-server`) + '..' + '..'
+                     "#{Pathname.new(`which redis-server`)}...."
                    end
   end
 
   def self.bin_dir
-    redis_dir + 'bin'
+    "#{redis_dir}bin"
   end
 
   def self.config
-    @config ||= if File.exist?(redis_dir + 'etc/redis.conf')
-                  redis_dir + 'etc/redis.conf'
+    @config ||= if File.exist?("#{redis_dir}etc/redis.conf")
+                  "#{redis_dir}etc/redis.conf"
                 else
-                  redis_dir + '../etc/redis.conf'
+                  "#{redis_dir}../etc/redis.conf"
                 end
   end
 
@@ -78,11 +78,11 @@ namespace :redis do
     RedisRunner.attach
   end
 
-  desc <<-DOC
+  desc <<-doc
   Install the latest version of Redis from Github (requires git, duh).
     Use INSTALL_DIR env var like "rake redis:install INSTALL_DIR=~/tmp"
     in order to get an alternate location for your install files.
-  DOC
+  doc
 
   task install: %i[about download make] do
     bin_dir = '/usr/bin'
@@ -149,7 +149,7 @@ namespace :dtach do
       require 'net/http'
 
       url = 'http://downloads.sourceforge.net/project/dtach/dtach/0.8/dtach-0.8.tar.gz'
-      open("#{INSTALL_DIR}/dtach-0.8.tar.gz", 'wb') { |file| file.write(open(url).read) }
+      File.open("#{INSTALL_DIR}/dtach-0.8.tar.gz", 'wb') { |file| file.write(URI.parse(url).open.read) }
     end
 
     sh "cd #{INSTALL_DIR} && tar xzf dtach-0.8.tar.gz" unless File.directory?("#{INSTALL_DIR}/dtach-0.8")

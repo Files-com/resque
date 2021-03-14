@@ -37,7 +37,7 @@ module Resque
       end
 
       def url_path(*path_parts)
-        [url_prefix, path_prefix, path_parts].join('/').squeeze('/')
+        [ url_prefix, path_prefix, path_parts ].join('/').squeeze('/')
       end
       alias_method :u, :url_path
 
@@ -87,16 +87,14 @@ module Resque
         when 'set'
           Resque.redis.smembers(key)[start..(start + 20)]
         when 'string'
-          [Resque.redis.get(key)]
+          [ Resque.redis.get(key) ]
         when 'zset'
           Resque.redis.zrange(key, start, start + 20)
         end
       end
 
       def show_args(args)
-        Array(args).map do |a|
-          a.to_yaml
-        end.join("\n")
+        Array(args).map(&:to_yaml).join("\n")
       rescue StandardError
         args.to_s
       end
@@ -110,7 +108,7 @@ module Resque
 
         Resque.workers.each do |worker|
           host, = worker.to_s.split(':')
-          hosts[host] += [worker.to_s]
+          hosts[host] += [ worker.to_s ]
         end
 
         hosts
@@ -137,7 +135,7 @@ module Resque
       end
     end
 
-    def show(page, layout = true)
+    def show(page, layout: true)
       response['Cache-Control'] = 'max-age=0, private, must-revalidate'
       begin
         erb page.to_sym, { layout: layout }, resque: Resque
@@ -149,7 +147,7 @@ module Resque
     def show_for_polling(page)
       content_type 'text/html'
       @polling = true
-      show(page.to_sym, false).gsub(/\s{1,}/, ' ')
+      show(page.to_sym, layout: false).gsub(/\s{1,}/, ' ')
     end
 
     # to make things easier on ourselves
@@ -191,12 +189,10 @@ module Resque
         else
           redirect u('working')
         end
+      elsif request.xhr?
+        'Killed'
       else
-        if request.xhr?
-          'Killed'
-        else
-          redirect u('working')
-        end
+        redirect u('working')
       end
     end
 
@@ -310,7 +306,7 @@ module Resque
     end
 
     def self.url_prefix
-      @url_prefix.nil? || @url_prefix.empty? ? '' : @url_prefix + '/'
+      @url_prefix.nil? || @url_prefix.empty? ? '' : "#{@url_prefix}/"
     end
   end
 end

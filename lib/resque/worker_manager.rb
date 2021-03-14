@@ -2,7 +2,7 @@ module Resque
   module WorkerManager
     class WorkerStatus
       include Resque::WorkerStatMethods
-      attr_reader :host, :pid, :queues, :worker_count, :thread_count, :jobs_per_fork, :worker_pid, :worker_pid, :worker_pid, :worker_pid
+      attr_reader :host, :pid, :queues, :worker_count, :thread_count, :jobs_per_fork, :worker_pid
 
       def initialize(worker_id, worker_pid = nil)
         @worker_id = worker_id.gsub(/worker:/, '')
@@ -24,17 +24,17 @@ module Resque
       end
 
       def jobs_running
-        threads_working.map { |thread| [thread, thread.job] }
+        threads_working.map { |thread| [ thread, thread.job ] }
       end
 
       def threads
-        data_store.worker_threads_map([@worker_id]).map do |key, value|
+        data_store.worker_threads_map([ @worker_id ]).map do |key, value|
           value ? WorkerThreadStatus.new(key, value) : nil
         end.compact
       end
 
       def threads_working
-        data_store.worker_threads_map([self]).map do |key, value|
+        data_store.worker_threads_map([ self ]).map do |key, value|
           value ? WorkerThreadStatus.new(key, value) : nil
         end.compact
       end
@@ -104,7 +104,7 @@ module Resque
 
     def self.abandoned_heartbeats
       worker_ids = data_store.worker_ids
-      all_heartbeats.keys.select { |key| !worker_ids.include?(key) }.map { |id| WorkerStatus.new(id) }.compact
+      all_heartbeats.keys.reject { |key| worker_ids.include?(key) }.map { |id| WorkerStatus.new(id) }.compact
     end
 
     def self.data_store
@@ -124,7 +124,7 @@ module Resque
     end
 
     def self.jobs_running
-      threads_working.map { |thread| [thread, thread.job] }
+      threads_working.map { |thread| [ thread, thread.job ] }
     end
 
     def self.prune_dead_workers

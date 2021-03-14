@@ -49,10 +49,10 @@ Resque::Server.helpers do
   def add_long_job_to_resque_peek(jobs)
     return jobs unless long_job_enabled?
 
-    uuids = jobs.map { |job| get_uuid(job.dig('args')) }.compact
+    uuids = jobs.map { |job| get_uuid(job['args']) }.compact
     long_jobs = LongJobRun.get_for_resque_status(uuids).to_a
     jobs.each do |job|
-      job['long_job'] = long_jobs.find { |lj| lj[:uuid] == get_uuid(job.dig('args')) }
+      job['long_job'] = long_jobs.find { |lj| lj[:uuid] == get_uuid(job['args']) }
     end
 
     jobs

@@ -6,13 +6,12 @@ module Resque
   #   Decr a stat: Stat.decr(name)
   #   Kill a stat: Stat.clear(name)
   module Stat
-    extend self
+    module_function
 
     # Direct access to the Redis instance.
-    def redis
+    def data_store
       Resque.redis
     end
-    alias data_store redis
 
     # Returns the int value of a stat, given a string stat name.
     def get(stat)
@@ -46,8 +45,8 @@ module Resque
     end
 
     # Decrements a stat by one.
-    def >>(stat)
-      decr stat
+    def >>(other)
+      decr other
     end
 
     # Removes a stat from Redis, effectively setting it to 0.

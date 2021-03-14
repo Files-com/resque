@@ -19,9 +19,9 @@ module Resque
 
       def initialize(exception, worker, queue, payload)
         @exception = exception
-        @worker    = worker
-        @queue     = queue
-        @payload   = payload
+        @worker = worker
+        @queue = queue
+        @payload = payload
       end
 
       # When a job fails, a new instance of your Failure backend is created

@@ -7,7 +7,7 @@ require 'mocha/setup'
 require 'connection_pool'
 
 $dir = File.dirname(File.expand_path(__FILE__))
-$LOAD_PATH.unshift $dir + '/../lib'
+$LOAD_PATH.unshift "#{$dir}/../lib"
 require 'resque'
 $TEST_PID = Process.pid
 
@@ -16,6 +16,7 @@ ENV['JOBS_PER_FORK'] = '100'
 begin
   require 'leftright'
 rescue LoadError
+  # ignore
 end
 
 #
@@ -34,8 +35,8 @@ end
 
 def kill_test_redis
   processes = `ps -A -o pid,command | grep "[r]edis.*9736"`.split("\n")
-  pids = processes.map { |process| process.split(' ')[0] }
-  if pids.size > 0
+  pids = processes.map { |process| process.split[0] }
+  unless pids.empty?
     puts 'Killing test redis server...'
     pids.each { |pid| Process.kill('KILL', pid.to_i) }
   end
@@ -87,12 +88,10 @@ module AssertInWorkBlock
     ex = catch(:exception_in_block) do
       block_called = nil
       retval = super(*args) do |*bargs|
-        begin
-          block_called = true
-          block.call(*bargs)
-        rescue MiniTest::Assertion => e
-          throw :exception_in_block, e
-        end
+        block_called = true
+        block.call(*bargs)
+      rescue MiniTest::Assertion => e
+        throw :exception_in_block, e
       end
 
       raise 'assertion block not called!' unless block_called
@@ -186,7 +185,7 @@ end
 
 class BadFailureBackend < Resque::Failure::Base
   def save
-    raise Exception, 'Failure backend error'
+    raise StandardError, 'Failure backend error'
   end
 end
 
@@ -228,7 +227,7 @@ def capture_io
 
   yield
 
-  [captured_stdout.string, captured_stderr.string]
+  [ captured_stdout.string, captured_stderr.string ]
 ensure
   $stdout = orig_stdout
   $stderr = orig_stderr
@@ -244,7 +243,7 @@ def capture_io_with_pipe
 
   $stdout.close
   $stderr.close
-  [stdout_rd.read, stderr_rd.read]
+  [ stdout_rd.read, stderr_rd.read ]
 ensure
   $stdout = orig_stdout
   $stderr = orig_stderr

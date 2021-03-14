@@ -2,6 +2,7 @@ source 'https://rubygems.org'
 
 gemspec
 
+gem 'activesupport'
 gem 'connection_pool'
 gem 'json'
 gem 'm'

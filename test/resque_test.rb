@@ -182,13 +182,11 @@ describe 'Resque' do
   end
 
   it 'inlining jobs' do
-    begin
-      Resque.inline = true
-      Resque.enqueue(SomeIvarJob, 20, '/tmp')
-      assert_equal 0, Resque.size(:ivar)
-    ensure
-      Resque.inline = false
-    end
+    Resque.inline = true
+    Resque.enqueue(SomeIvarJob, 20, '/tmp')
+    assert_equal 0, Resque.size(:ivar)
+  ensure
+    Resque.inline = false
   end
 
   describe 'with people in the queue' do
@@ -224,9 +222,9 @@ describe 'Resque' do
     it 'can peek multiple items on a queue' do
       assert_equal({ 'name' => 'bob' }, Resque.peek(:people, 1, 1))
 
-      assert_equal([{ 'name' => 'bob' }, { 'name' => 'mark' }], Resque.peek(:people, 1, 2))
-      assert_equal([{ 'name' => 'chris' }, { 'name' => 'bob' }], Resque.peek(:people, 0, 2))
-      assert_equal([{ 'name' => 'chris' }, { 'name' => 'bob' }, { 'name' => 'mark' }], Resque.peek(:people, 0, 3))
+      assert_equal([ { 'name' => 'bob' }, { 'name' => 'mark' } ], Resque.peek(:people, 1, 2))
+      assert_equal([ { 'name' => 'chris' }, { 'name' => 'bob' } ], Resque.peek(:people, 0, 2))
+      assert_equal([ { 'name' => 'chris' }, { 'name' => 'bob' }, { 'name' => 'mark' } ], Resque.peek(:people, 0, 3))
       assert_equal({ 'name' => 'mark' }, Resque.peek(:people, 2, 1))
       assert_equal nil, Resque.peek(:people, 3)
       assert_equal [], Resque.peek(:people, 3, 2)
@@ -248,9 +246,9 @@ describe 'Resque' do
 
     it 'keeps track of resque keys' do
       # ignore the heartbeat key that gets set in a background thread
-      keys = Resque.keys - ['workers:heartbeat']
+      keys = Resque.keys - [ 'workers:heartbeat' ]
 
-      assert_equal ['queue:people', 'queues'].sort, keys.sort
+      assert_equal [ 'queue:people', 'queues' ].sort, keys.sort
     end
 
     it 'keeps stats' do
@@ -269,7 +267,7 @@ describe 'Resque' do
       2.times { @worker.work_one_job }
 
       wt = Resque::WorkerThread.new(@worker)
-      @worker.instance_variable_set(:@worker_threads, [wt])
+      @worker.instance_variable_set(:@worker_threads, [ wt ])
       wt.job = @worker.reserve
       wt.set_payload
 
@@ -283,7 +281,7 @@ describe 'Resque' do
       assert_equal 3, stats[:queues]
       assert_equal 3, stats[:processed]
       assert_equal 1, stats[:failed]
-      assert_equal [Resque.redis_id], stats[:servers]
+      assert_equal [ Resque.redis_id ], stats[:servers]
     end
   end
 
@@ -337,7 +335,7 @@ describe 'Resque' do
 
       samples = queues['queue1'][:samples]
       assert_equal 'SomeJob', samples[0]['class']
-      assert_equal([{ 'arg1' => '1' }], samples[0]['args'])
+      assert_equal([ { 'arg1' => '1' } ], samples[0]['args'])
     end
 
     it 'sample_queues with simple jobs' do
@@ -349,8 +347,8 @@ describe 'Resque' do
       assert_equal 2, queues['queue1'][:size]
 
       samples = queues['queue1'][:samples]
-      assert_equal([{ 'arg1' => '1' }], samples[0]['args'])
-      assert_equal([{ 'arg1' => '2' }], samples[1]['args'])
+      assert_equal([ { 'arg1' => '1' } ], samples[0]['args'])
+      assert_equal([ { 'arg1' => '2' } ], samples[1]['args'])
     end
 
     it 'sample_queues with more jobs only returns sample size number of jobs' do

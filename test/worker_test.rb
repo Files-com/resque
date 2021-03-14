@@ -22,7 +22,7 @@ describe 'Resque::Worker' do
   end
 
   def attach_worker_thread_to_worker
-    @worker.instance_variable_set(:@worker_threads, [@worker_thread])
+    @worker.instance_variable_set(:@worker_threads, [ @worker_thread ])
   end
 
   before do
@@ -104,7 +104,7 @@ describe 'Resque::Worker' do
 
   def raised_exception(klass, message)
     raise klass, message
-  rescue Exception => e
+  rescue Exception
     ex
   end
 
@@ -157,7 +157,7 @@ describe 'Resque::Worker' do
     end
 
     def self.perform
-      raise Exception
+      raise StandardError
     end
   end
 
@@ -211,14 +211,14 @@ describe 'Resque::Worker' do
 
     old_prefix = ENV['RESQUE_PROCLINE_PREFIX']
     ENV.delete('RESQUE_PROCLINE_PREFIX')
-    old_procline = $0
+    old_procline = $PROGRAM_NAME
 
     @worker.procline(suffix)
-    assert_equal $0, "resque-#{ver}: #{suffix}"
+    assert_equal $PROGRAM_NAME, "resque-#{ver}: #{suffix}"
 
     ENV['RESQUE_PROCLINE_PREFIX'] = prefix
     @worker.procline(suffix)
-    assert_equal $0, "#{prefix}resque-#{ver}: #{suffix}"
+    assert_equal $PROGRAM_NAME, "#{prefix}resque-#{ver}: #{suffix}"
 
     $0 = old_procline
     if old_prefix.nil?
@@ -422,7 +422,7 @@ describe 'Resque::Worker' do
   end
 
   it 'has a unique id' do
-    assert_equal "#{`hostname`.chomp}:#{$$}:jobs:1:1:100", @worker.to_s
+    assert_equal "#{`hostname`.chomp}:#{$PROCESS_ID}:jobs:1:1:100", @worker.to_s
   end
 
   it 'complains if no queues are given' do
@@ -468,7 +468,7 @@ describe 'Resque::Worker' do
   it 'knows who is working' do
     without_forking do
       @worker.extend(AssertInWorkBlock).work(0) do
-        assert_equal [@worker], Resque.working
+        assert_equal [ @worker ], Resque.working
       end
     end
   end
@@ -513,7 +513,7 @@ describe 'Resque::Worker' do
       @worker.extend(AssertInWorkBlock).work(0) do
         prefix = ENV['RESQUE_PROCLINE_PREFIX']
         ver = Resque::Version
-        assert_equal "#{prefix}resque-#{ver}: Processing Job(s): SomeJob", $0
+        assert_equal "#{prefix}resque-#{ver}: Processing Job(s): SomeJob", $PROGRAM_NAME
       end
     end
   end
@@ -546,7 +546,7 @@ describe 'Resque::Worker' do
 
   it 'setting setting verbose to true and then very_verbose to false' do
     @worker.very_verbose = true
-    @worker.verbose      = true
+    @worker.verbose = true
     @worker.very_verbose = false
 
     assert @worker.verbose
@@ -554,8 +554,8 @@ describe 'Resque::Worker' do
   end
 
   it 'verbose prints out logs' do
-    messages        = StringIO.new
-    Resque.logger   = Logger.new(messages)
+    messages = StringIO.new
+    Resque.logger = Logger.new(messages)
     @worker.verbose = true
 
     @worker.log('omghi mom')
@@ -564,8 +564,8 @@ describe 'Resque::Worker' do
   end
 
   it 'unsetting verbose works' do
-    messages        = StringIO.new
-    Resque.logger   = Logger.new(messages)
+    messages = StringIO.new
+    Resque.logger = Logger.new(messages)
     @worker.verbose = true
     @worker.verbose = false
 
@@ -575,8 +575,8 @@ describe 'Resque::Worker' do
   end
 
   it 'very verbose works in the afternoon' do
-    messages        = StringIO.new
-    Resque.logger   = Logger.new(messages)
+    messages = StringIO.new
+    Resque.logger = Logger.new(messages)
 
     with_fake_time(Time.parse('15:44:33 2011-03-02')) do
       @worker.very_verbose = true
@@ -587,10 +587,10 @@ describe 'Resque::Worker' do
   end
 
   it 'keeps a custom logger state after a new worker is instantiated if there is no verbose options' do
-    messages                = StringIO.new
-    custom_logger           = Logger.new(messages)
-    custom_logger.level     = Logger::FATAL
-    custom_formatter        = proc do |severity, datetime, progname, msg|
+    messages = StringIO.new
+    custom_logger = Logger.new(messages)
+    custom_logger.level = Logger::FATAL
+    custom_formatter = proc do |severity, datetime, progname, msg|
       formatter.call(severity, datetime, progname, msg.dump)
     end
     custom_logger.formatter = custom_formatter
@@ -611,8 +611,8 @@ describe 'Resque::Worker' do
     Resque::Failure.create(exception: Exception.new, worker: Resque::Worker.new(queue), queue: queue, payload: { 'class' => 'GoodJob' })
     Resque::Failure.create(exception: Exception.new, worker: Resque::Worker.new(queue), queue: 'some_job', payload: { 'class' => 'SomeJob' })
     Resque::Failure.requeue_queue(queue)
-    assert Resque::Failure.all(0).has_key?('retried_at')
-    assert !Resque::Failure.all(1).has_key?('retried_at')
+    assert Resque::Failure.all(0).key?('retried_at')
+    assert !Resque::Failure.all(1).key?('retried_at')
   end
 
   it 'remove failed queue' do

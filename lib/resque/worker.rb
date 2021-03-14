@@ -24,7 +24,7 @@ module Resque
     include WorkerStatMethods
 
     attr_accessor :term_timeout, :jobs_per_fork, :worker_count, :thread_count, :statsd, :statsd_key
-    attr_reader :jobs_processed, :worker_pid
+    attr_reader :jobs_processed, :worker_pid, :verbose, :very_verbose
     attr_writer :hostname, :to_s
 
     def data_store
@@ -56,9 +56,9 @@ module Resque
       self.verbose = verbose_value if verbose_value
       self.very_verbose = ENV['VVERBOSE'] if ENV['VVERBOSE']
       self.term_timeout = (ENV['RESQUE_TERM_TIMEOUT'] || 30.0).to_f
-      self.jobs_per_fork = [(ENV['JOBS_PER_FORK'] || 1).to_i, 1].max
-      self.worker_count = [(ENV['WORKER_COUNT'] || 1).to_i, 1].max
-      self.thread_count = [(ENV['THREAD_COUNT'] || 1).to_i, 1].max
+      self.jobs_per_fork = [ (ENV['JOBS_PER_FORK'] || 1).to_i, 1 ].max
+      self.worker_count = [ (ENV['WORKER_COUNT'] || 1).to_i, 1 ].max
+      self.thread_count = [ (ENV['THREAD_COUNT'] || 1).to_i, 1 ].max
 
       if ENV['STATSD_KEY'] && ENV['STATSD_HOST'] && ENV['STATSD_PORT']
         self.statsd = Statsd.new(ENV['STATSD_HOST'], ENV['STATSD_PORT'])
@@ -75,7 +75,7 @@ module Resque
       File.open(ENV['PIDFILE'], 'w') { |f| f << pid } if ENV['PIDFILE']
     end
 
-    WILDCARDS = ['*', '?', '{', '}', '[', ']'].freeze
+    WILDCARDS = [ '*', '?', '{', '}', '[', ']' ].freeze
 
     def queues=(queues)
       queues = queues.empty? ? (ENV['QUEUES'] || ENV['QUEUE']).to_s.split(',') : queues
@@ -86,9 +86,7 @@ module Resque
 
     def validate_queues
       raise NoQueueError, 'Please give each worker at least one queue.' if @queues.nil? || @queues.empty?
-      if @has_dynamic_queues && @queues.any? { |queue| queue =~ /:/ }
-        raise NoQueueError, 'You cannot use the colon syntax for defining max workers per queue if you are also using dynamic queues.'
-      end
+      raise NoQueueError, 'You cannot use the colon syntax for defining max workers per queue if you are also using dynamic queues.' if @has_dynamic_queues && @queues.any? { |queue| queue =~ /:/ }
     end
 
     def queues
@@ -125,9 +123,7 @@ module Resque
             if child
               if Process.waitpid(child, Process::WNOHANG)
                 @children[index] = nil
-                unless interval.zero? || shutdown?
-                  fork_worker_process(OpenStruct.new(index: index, interval: interval), &block)
-                end
+                fork_worker_process(OpenStruct.new(index: index, interval: interval), &block) unless interval.zero? || shutdown?
               end
             elsif shutdown?
               log_with_severity :debug, "Deleting Worker index #{index} for shutdown."
@@ -135,15 +131,15 @@ module Resque
             end
           end
 
-          break if (interval.zero? || shutdown?) && (@children.size == 0)
+          break if (interval.zero? || shutdown?) && @children.empty?
 
           sleep interval
         end
       end
 
       unregister_worker
-    rescue Exception => e
-      return if e.class == SystemExit && !@children
+    rescue Exception => e # rubocop:disable Lint/RescueException
+      return if e.instance_of?(SystemExit) && !@children
 
       log_with_severity :error, "Worker Error: #{e.inspect} #{e.backtrace}"
       unregister_worker(e)
@@ -184,10 +180,8 @@ module Resque
       thread_count * worker_count
     end
 
-    def synchronize
-      @mutex.synchronize do
-        yield
-      end
+    def synchronize(&block)
+      @mutex.synchronize(&block)
     end
 
     def job_processed
@@ -204,11 +198,11 @@ module Resque
     end
 
     def set_procline
-      jobs = @worker_threads.map { |thread| thread.payload_class_name }.compact
-      if jobs.size > 0
-        procline "Processing Job(s): #{jobs.join(', ')}"
-      else
+      jobs = @worker_threads.map(&:payload_class_name).compact
+      if jobs.empty?
         procline paused? ? 'Paused' : "Waiting for #{queues.join(',')}"
+      else
+        procline "Processing Job(s): #{jobs.join(', ')}"
       end
     end
 
@@ -216,7 +210,7 @@ module Resque
       index_offset = 0
       queues.each do |queue_config|
         queue, max_threads = queue_config.split(':')
-        max_threads = if max_threads =~ /[0-9]+\%/
+        max_threads = if max_threads =~ /[0-9]+%/
                         total_threads * max_threads.to_i / 100
                       else
                         max_threads.to_i
@@ -233,7 +227,7 @@ module Resque
       end
 
       nil
-    rescue Exception => e
+    rescue Exception => e # rubocop:disable Lint/RescueException
       log_with_severity :error, "Error reserving job: #{e.inspect}"
       log_with_severity :error, e.backtrace.join("\n")
       raise e
@@ -251,14 +245,40 @@ module Resque
     end
 
     def register_signal_handlers
-      trap('TERM') { shutdown; send_child_signal('TERM'); kill_worker_threads }
-      trap('INT')  { shutdown; send_child_signal('INT'); kill_worker_threads }
+      trap('TERM') {
+        shutdown
+        send_child_signal('TERM')
+        kill_worker_threads
+      }
+
+      trap('INT') {
+        shutdown
+        send_child_signal('INT')
+        kill_worker_threads
+      }
 
       begin
-        trap('QUIT') { shutdown; send_child_signal('QUIT'); worker_thread_kill_timer }
-        trap('USR1') { send_child_signal('USR1'); unpause_processing; kill_worker_threads }
-        trap('USR2') { pause_processing; send_child_signal('USR2') }
-        trap('CONT') { unpause_processing; send_child_signal('CONT') }
+        trap('QUIT') {
+          shutdown
+          send_child_signal('QUIT')
+          worker_thread_kill_timer
+        }
+
+        trap('USR1') {
+          send_child_signal('USR1')
+          unpause_processing
+          kill_worker_threads
+        }
+
+        trap('USR2') {
+          pause_processing
+          send_child_signal('USR2')
+        }
+
+        trap('CONT') {
+          unpause_processing
+          send_child_signal('CONT')
+        }
       rescue ArgumentError
         log_with_severity :warn, 'Signals QUIT, USR1, USR2, and/or CONT not supported.'
       end
@@ -268,16 +288,14 @@ module Resque
 
     def send_child_signal(signal)
       @children&.values&.each do |child|
-        begin
-          Process.kill(signal, child)
-        rescue StandardError
-          nil
-        end
+        Process.kill(signal, child)
+      rescue StandardError
+        nil
       end
     end
 
     def kill_worker_thread(id)
-      @worker_threads.select { |thread| thread.id == id }.each { |t| t.kill }
+      @worker_threads.select { |thread| thread.id == id }.each(&:kill)
     end
 
     def kill_worker_threads
@@ -363,7 +381,7 @@ module Resque
         Stat.clear("processed:#{self}")
         Stat.clear("failed:#{self}")
       end
-    rescue Exception => e
+    rescue Exception => e # rubocop:disable Lint/RescueException
       message = e.message
       if exception
         message += "\nOriginal Exception (#{exception.class}): #{exception.message}"
@@ -371,7 +389,8 @@ module Resque
       end
       raise(e.class,
             message,
-            e.backtrace)
+            e.backtrace
+           )
     end
 
     def processed!
@@ -412,7 +431,7 @@ module Resque
 
     def procline(string)
       $0 = "#{ENV['RESQUE_PROCLINE_PREFIX']}resque-#{Resque::Version}: #{string}"
-      log_with_severity :debug, $0
+      log_with_severity :debug, $PROGRAM_NAME
     end
 
     def log(message)
@@ -422,8 +441,6 @@ module Resque
     def log!(message)
       debug(message)
     end
-
-    attr_reader :verbose, :very_verbose
 
     def verbose=(value)
       if value && !very_verbose

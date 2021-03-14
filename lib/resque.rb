@@ -24,6 +24,13 @@ require 'resque/plugin'
 require 'resque/data_store'
 require 'resque/thread_signal'
 
+require 'resque/redis_backed'
+require 'resque/long_job'
+require 'resque/long_job/enqueuer'
+require 'resque/long_job/job_configuration'
+require 'resque/long_job/runner'
+require 'resque/long_job/worker_block'
+
 require 'resque/vendor/utf8_util'
 
 module Resque
@@ -89,7 +96,7 @@ module Resque
 
     constant = Object
     names.each do |name|
-      args = Module.method(:const_get).arity != 1 ? [false] : []
+      args = Module.method(:const_get).arity == 1 ? [] : [ false ]
 
       constant = if constant.const_defined?(name, *args)
                    constant.const_get(name)
@@ -113,13 +120,14 @@ module Resque
   def redis=(server)
     case server
     when String
-      if server =~ %r{redis\://}
+      if server =~ /redis:\/\//
         redis = Redis.new(url: server, thread_safe: true)
       else
         server, namespace = server.split('/', 2)
         host, port, db = server.split(':')
         redis = Redis.new(host: host, port: port,
-                          thread_safe: true, db: db)
+                          thread_safe: true, db: db
+                         )
       end
       namespace ||= :resque
 
@@ -155,7 +163,8 @@ module Resque
   DEFAULT_HEARTBEAT_INTERVAL = 2
   DEFAULT_PRUNE_INTERVAL = DEFAULT_HEARTBEAT_INTERVAL * 30
 
-  attr_writer :heartbeat_interval
+  attr_writer :heartbeat_interval, :prune_interval, :enqueue_front
+
   def heartbeat_interval
     if defined? @heartbeat_interval
       @heartbeat_interval
@@ -164,7 +173,6 @@ module Resque
     end
   end
 
-  attr_writer :prune_interval
   def prune_interval
     if defined? @prune_interval
       @prune_interval
@@ -173,7 +181,6 @@ module Resque
     end
   end
 
-  attr_writer :enqueue_front
   def enqueue_front
     if defined? @enqueue_front
       @enqueue_front
@@ -507,7 +514,7 @@ module Resque
       workers: workers.size.to_i,
       working: threads_working.size,
       failed: data_store.num_failed,
-      servers: [redis_id],
+      servers: [ redis_id ],
       environment: ENV['RAILS_ENV'] || ENV['RACK_ENV'] || 'development'
     }
   end
@@ -586,5 +593,5 @@ module Resque
 end
 
 # Log to STDOUT by default
-Resque.logger           = MonoLogger.new(STDOUT)
+Resque.logger = MonoLogger.new($stdout)
 Resque.logger.formatter = Resque::QuietFormatter.new

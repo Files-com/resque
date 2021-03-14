@@ -10,9 +10,9 @@ describe 'Resque::Logging' do
 
   %w[debug info error fatal].each do |severity|
     it "logs #{severity} messages" do
-      message       = 'test message'
-      mock_logger   = MiniTest::Mock.new
-      mock_logger.expect severity.to_sym, nil, [message]
+      message = 'test message'
+      mock_logger = MiniTest::Mock.new
+      mock_logger.expect severity.to_sym, nil, [ message ]
       Resque.logger = mock_logger
 
       Resque::Logging.send severity, message

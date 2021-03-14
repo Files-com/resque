@@ -14,11 +14,11 @@ module Resque
     end
 
     def info(message)
-      Logging.log :info,  message
+      Logging.log :info, message
     end
 
     def warn(message)
-      Logging.log :warn,  message
+      Logging.log :warn, message
     end
 
     def error(message)

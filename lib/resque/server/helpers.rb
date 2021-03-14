@@ -4,9 +4,9 @@ Resque::Server.helpers do
   end
 
   def failed_multiple_queues?
-    return @multiple_failed_queues if defined?(@multiple_failed_queues)
+    return @failed_multiple_queues if defined?(@failed_multiple_queues)
 
-    @multiple_failed_queues = Resque::Failure.queues.size > 1
+    @failed_multiple_queues = Resque::Failure.queues.size > 1
   end
 
   def failed_size
@@ -18,7 +18,7 @@ Resque::Server.helpers do
                          failed_size
                        else
                          20
-    end
+                       end
   end
 
   def failed_start_at
@@ -51,7 +51,7 @@ Resque::Server.helpers do
     if size == 0
       name ? "No #{name}s" : '<b>0</b>'
     elsif size == 1
-      'Showing <b>1</b>' + (name ? " #{name}" : '')
+      "Showing <b>1</b>#{name ? " #{name}" : ''}"
     elsif size > failed_per_page
       "Showing #{start}-#{stop} of <b>#{size}</b>" + (name ? " #{name}s" : '')
     else

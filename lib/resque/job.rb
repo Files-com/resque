@@ -114,14 +114,16 @@ module Resque
               'args' => decode(encode(args)),
               'id' => id,
               'generation' => generation
-            }).perform
+            }
+        ).perform
       else
         Resque.push(queue, {
                       class: klass.to_s,
                       args: args,
                       id: id,
                       generation: generation
-                    })
+                    }
+        )
       end
     end
 
@@ -264,7 +266,7 @@ module Resque
     # the Failure module.
     def fail(exception)
       run_failure_hooks(exception)
-    rescue Exception => e
+    rescue Exception => e # rubocop:disable Lint/RescueException
       raise e
     ensure
       unless skip_failed_queue?
@@ -318,10 +320,8 @@ module Resque
 
     def run_failure_hooks(exception)
       job_args = args || []
-      if has_payload_class?
-        failure_hooks.each { |hook| payload_class.send(hook, exception, *job_args) } unless @failure_hooks_ran
-      end
-    rescue Exception => e
+      failure_hooks.each { |hook| payload_class.send(hook, exception, *job_args) } if has_payload_class? && !@failure_hooks_ran
+    rescue Exception => e # rubocop:disable Lint/RescueException
       error_message = "Additional error (#{e.class}: #{e}) occurred in running failure hooks for job #{inspect}\n" \
                       "Original error that caused job failure was #{e.class}: #{exception.class}: #{exception.message}"
       raise error_message

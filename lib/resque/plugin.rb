@@ -1,6 +1,6 @@
 module Resque
   module Plugin
-    extend self
+    module_function
 
     LintError = Class.new(RuntimeError)
 
@@ -21,7 +21,7 @@ module Resque
 
     @job_methods = {}
     def job_methods(job)
-      @job_methods[job] ||= job.methods.collect { |m| m.to_s }
+      @job_methods[job] ||= job.methods.collect(&:to_s)
     end
 
     # Given an object, and a method prefix, returns a list of methods prefixed

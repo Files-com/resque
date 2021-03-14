@@ -1,7 +1,3 @@
-#
-# Setup
-#
-
 load 'lib/tasks/redis.rake'
 
 $LOAD_PATH.unshift 'lib'
@@ -14,10 +10,6 @@ end
 require 'rubygems'
 require 'bundler/setup'
 require 'bundler/gem_tasks'
-
-#
-# Tests
-#
 
 require 'rake/testtask'
 
@@ -38,17 +30,10 @@ if command? :kicker
   end
 end
 
-#
-# Install
-#
-
-task install: ['redis:install', 'dtach:install']
-
-#
-# Documentation
-#
+task install: [ 'redis:install', 'dtach:install' ]
 
 begin
   require 'sdoc_helpers'
 rescue LoadError
+  # ignore
 end

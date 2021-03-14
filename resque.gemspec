@@ -2,23 +2,24 @@ $LOAD_PATH.unshift 'lib'
 require 'resque/version'
 
 Gem::Specification.new do |s|
-  s.name              = 'resque'
-  s.version           = Resque::Version
-  s.summary           = "Action Verb's Resque fork"
-  s.homepage          = 'https://www.actionverb.com/open-source/resque'
-  s.email             = 'kevin@actionverb.com'
-  s.authors           = ['Chris Wanstrath', 'Steve Klabnik', 'Terence Lee', 'Kevin Bombino']
+  s.name = 'resque'
+  s.version = Resque::Version
+  s.required_ruby_version = '>= 2.5.0'
+  s.summary = "Action Verb's Resque fork"
+  s.homepage = 'https://www.actionverb.com/open-source/resque'
+  s.email = 'kevin@actionverb.com'
+  s.authors = [ 'Chris Wanstrath', 'Steve Klabnik', 'Terence Lee', 'Kevin Bombino' ]
 
-  s.files             = %w[README.md Rakefile LICENSE]
-  s.files            += Dir.glob('lib/**/*')
-  s.files            += Dir.glob('bin/**/*')
-  s.files            += Dir.glob('man/**/*')
-  s.files            += Dir.glob('tasks/**/*')
-  s.executables       = []
-  s.license           = 'MIT'
+  s.files = %w[README.md Rakefile LICENSE]
+  s.files += Dir.glob('lib/**/*')
+  s.files += Dir.glob('bin/**/*')
+  s.files += Dir.glob('man/**/*')
+  s.files += Dir.glob('tasks/**/*')
+  s.executables = []
+  s.license = 'MIT'
 
-  s.extra_rdoc_files  = ['LICENSE', 'README.md']
-  s.rdoc_options      = ['--charset=UTF-8']
+  s.extra_rdoc_files = [ 'LICENSE', 'README.md' ]
+  s.rdoc_options = [ '--charset=UTF-8' ]
 
   s.add_dependency 'connection_pool', '~> 2.2.2'
   s.add_dependency 'mono_logger', '~> 1.0'

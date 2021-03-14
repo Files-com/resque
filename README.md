@@ -146,22 +146,23 @@ So let's talk about the DSL.
 
 ```
 class MyJob < LongJob
-  def self.long_job_perform(runner, site, *args)
+  def self.long_job_perform(runner, shard, *args)
 
   end
 end
 ```
 
-Currently, the notion of a Site is hardcoded into LongJob.  At some point we will likely
-refactor LongJob into its own gem that is independent from files-rails and Site will
-likely lose its status as something special.  But for now, you create a LongJob by creating a class in `app/jobs` that inherits from LongJob.  By convention, we name the jobs after the class that they relate to and the action they do on that class.
+A Shard is an object (specific to your app) that represents the primary way you divide
+your app by tenant in a multi-tenant app.  At Files.com, that object represents a Site
+(i.e. one paying tenant of our app).
 
-Generally, by convention, also tend to keep most of the logic out of the job class and simply pass the runner into the main object being operated on.  For example:
+Generally, by convention, also tend to keep most of the logic out of the job class
+and simply pass the runner into the main object being operated on.  For example:
 
 ```
-class SiteDoThingJob < LongJob
-  def self.long_job_perform(runner, site, *args)
-    site.do_thing(runner)
+class ShardDoThingJob < LongJob
+  def self.long_job_perform(runner, shard, *args)
+    shard.do_thing(runner)
   end
 end
 ```
@@ -175,8 +176,8 @@ The first method to be aware of is the `#state` method, which saves and retrieve
 in the Runner:
 
 ```
-class SiteDoThingJob < LongJob
-  def self.long_job_perform(runner, site, *args)
+class ShardDoThingJob < LongJob
+  def self.long_job_perform(runner, shard, *args)
     runner.state("foo", "bar") # sets state `foo` to `bar`
     runner.state("foo") # => "bar"
   end
@@ -202,8 +203,8 @@ Such a job could be written as follows:
 
 
 ```
-class SiteDoThingJob < LongJob
-  def self.long_job_perform(runner, site, *args)
+class shardDoThingJob < LongJob
+  def self.long_job_perform(runner, shard, *args)
     loop do
       break unless runner.work_unit do
         next unless data = ExternalQueue.pop
@@ -229,17 +230,17 @@ Work Once is a DSL method that internally uses state to ensure that the given bl
 only runs a single time per LongJob run (not per Resque run).
 
 ```
-class SiteDoThingJob < LongJob
-  def self.long_job_perform(runner, site, *args)
-    runner.work_once("setup") { site.setup }
-    runner.work_once("finalize") { site.finalize }
+class shardDoThingJob < LongJob
+  def self.long_job_perform(runner, shard, *args)
+    runner.work_once("setup") { shard.setup }
+    runner.work_once("finalize") { shard.finalize }
   end
 end
 ```
 
-In this scenario, if `site.setup` takes > 15 seconds to run, then `site.setup` will
-have run on the first Resque job run and `site.finalize` will run on the second
-Resque job run.  If `site.setup` were faster, it would run all in one Resque run.
+In this scenario, if `shard.setup` takes > 15 seconds to run, then `shard.setup` will
+have run on the first Resque job run and `shard.finalize` will run on the second
+Resque job run.  If `shard.setup` were faster, it would run all in one Resque run.
 
 
 #### Work Each
@@ -248,9 +249,9 @@ Work Each works like Work Once but it runs once for each item in the provided ar
 For example:
 
 ```
-class SiteDoThingJob < LongJob
-  def self.long_job_perform(runner, site, *args)
-    runner.work_each([ "setup", "finalize" ]) { |method| site.send(method) }
+class shardDoThingJob < LongJob
+  def self.long_job_perform(runner, shard, *args)
+    runner.work_each([ "setup", "finalize" ]) { |method| shard.send(method) }
   end
 end
 ```

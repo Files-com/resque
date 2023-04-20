@@ -1,4 +1,4 @@
-# Action Verb's Fork of Resque
+# Files.com Fork of Resque
 
 Resque is awesome, and it's original README is available at its main
 repository at https://github.com/resque/resque
